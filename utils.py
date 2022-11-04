@@ -19,7 +19,7 @@ def majorisation(reduced_psi, reduced_phi):
         if not sum(lambda_psi[0:j]) <= sum(lambda_phi[0:j]):
             return False
 
-    #at every k, vector a's elements sum higher than vector b's elements
+    #at every k, vector a's elements sum lesser than or equal to vector b's elements
     return True
 
 
