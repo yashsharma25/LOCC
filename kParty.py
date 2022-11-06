@@ -1,3 +1,6 @@
+import qiskit
+from qiskit import QuantumCircuit
+
 class kParty:
     '''
     k is the number of parties
@@ -12,7 +15,7 @@ class kParty:
     Here party A has 2 qutrits, party B has 4 qubits, party C has 1 qubit
     '''
 
-    #qState can be a statevector, densityMatrix or graph state. All 3 descriptions will be supported
+    #qState can be a statevector, densityMatrix, quantumCircuit or graph state. All 4 descriptions will be supported
     def __init__(self, k, state_desc, qState):
         #all the qudits will be intialised as |0>
         return
