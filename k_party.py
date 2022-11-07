@@ -32,6 +32,14 @@ class k_party:
     def total_qudits(self):
         return
 
+    #creates a copy of the current k_party state
+    def copy(self):
+        return
+        
+    #new_party_desc is a tuple (number_of_qudits, dims of each qudit)
+    def add_new_party(self, new_party_desc):
+        return
+
     #will return density matrix of the k-party state
     def get_density_matrix(self):
         return
@@ -62,6 +70,7 @@ class k_party:
         return
 
     #return the probability by which a state is transformable to another using LOCC
+    #SLOCC = Stochastic LOCC
     def slocc_equivalence(self, other_k_party_state):
         probability = 0.0
         return probability
