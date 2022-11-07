@@ -24,6 +24,14 @@ class k_party:
     def dims(self):
         return
 
+    #get hilbert space dimension of the specified party
+    def get_dims_by_party(self, party_index):
+        return
+
+    #get total qudits in the k_party state
+    def total_qudits(self):
+        return
+
     #will return density matrix of the k-party state
     def get_density_matrix(self):
         return
