@@ -16,9 +16,11 @@ class k_party:
     '''
 
     #qState can be a statevector, densityMatrix, quantumCircuit or graph state. All 4 descriptions will be supported
-    def __init__(self, k, state_desc, qState):
+    def __init__(self, k, state_desc, q_state):
         #all the qudits will be intialised as |0>
-        return
+        self.parties = k
+        self.state_desc = state_desc
+        self.q_state = q_state
 
     #get the Hilbert space dimension of the k-party state
     def dims(self):
@@ -26,19 +28,31 @@ class k_party:
 
     #get hilbert space dimension of the specified party
     def get_dims_by_party(self, party_index):
-        return
+
+        if party_index > self.k:
+            return "Party index out of bounds"
+        
+        #Are all the qudits that a party has kept separately? Or is it one state?
+        return max(self.state_desc[party_index][1])
+
 
     #get total qudits in the k_party state
     def total_qudits(self):
-        return
+        total_qudits = 0
+        for s in self.state_desc:
+            total_qudits += s[0]
+
+        return total_qudits
 
     #creates a copy of the current k_party state
+    #use the deep copy function here?
     def copy(self):
         return
-        
+
     #new_party_desc is a tuple (number_of_qudits, dims of each qudit)
     def add_new_party(self, new_party_desc):
-        return
+        self.k += 1
+        self.state_desc.append(new_party_desc)
 
     #will return density matrix of the k-party state
     def get_density_matrix(self):
