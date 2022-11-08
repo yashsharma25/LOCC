@@ -28,7 +28,6 @@ class k_party:
 
     #get hilbert space dimension of the specified party
     def get_dims_by_party(self, party_index):
-
         if party_index > self.k:
             return "Party index out of bounds"
         
