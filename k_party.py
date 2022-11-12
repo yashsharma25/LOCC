@@ -84,9 +84,9 @@ class k_party:
     def measure(self, party_index, qudit_indices):
         self.q_state.measure(party_index)
 
-    def measure_different_basis(self, basis_matrix):
+    def measure_different_basis(self, party_index, qudit_indices, basis_matrix):
         self.q_state.evolve(basis_matrix)
-        self.measure_standard_basis()
+        self.measure(party_index, qudit_indices)
         
     #return the probability by which a state is transformable to another using LOCC
     #SLOCC = Stochastic LOCC
