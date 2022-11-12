@@ -1,5 +1,7 @@
 import qiskit
 from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector
+
 
 class k_party:
     '''
@@ -80,8 +82,12 @@ class k_party:
     #update the state afte measurement
     #projective measurement
     def measure(self, party_index, qudit_indices):
-        return
+        self.q_state.measure(party_index)
 
+    def measure_different_basis(self, basis_matrix):
+        self.q_state.evolve(basis_matrix)
+        self.measure_standard_basis()
+        
     #return the probability by which a state is transformable to another using LOCC
     #SLOCC = Stochastic LOCC
     def slocc_equivalence(self, other_k_party_state):
