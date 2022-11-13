@@ -1,3 +1,5 @@
+#gets qutrit states phi and psi, checks if psi is transformable to phi
+
 import numpy as np
 #import qutip
 from utils import *
