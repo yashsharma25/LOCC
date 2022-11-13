@@ -1,5 +1,4 @@
 import numpy as np
-#import qutip
 from utils import *
 
 ket0 = [1, 0, 0]
