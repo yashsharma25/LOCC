@@ -2,7 +2,7 @@
 import numpy as np
 import math
 from qiskit.quantum_info import shannon_entropy
-
+import optimiser
 
 class EntanglementMeasures:
     def entanglement_entropy(self, quantum_state):
@@ -23,8 +23,9 @@ class EntanglementMeasures:
         return
 
     def nursing_index(self):
+        
+        optimiser.compute_nursing_index()
         return
-
 
     def entropy_using_singular_values(self, state):
         u, singular_values, vT = np.linalg.svd(state)

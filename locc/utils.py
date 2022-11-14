@@ -1,6 +1,9 @@
 import numpy as np
 
 class utils:
+    def __init__(self):
+        return
+
     # Take the partial trace
     def partial_trace(self, dm):
         # partial trace the second space
