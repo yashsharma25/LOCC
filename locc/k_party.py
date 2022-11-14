@@ -2,7 +2,6 @@ import qiskit
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 
-
 class k_party:
     '''
     k is the number of parties
@@ -20,6 +19,7 @@ class k_party:
     #qState can be a statevector, densityMatrix, quantumCircuit or graph state. All 4 descriptions will be supported
     def __init__(self, k, state_desc, q_state):
         #all the qudits will be intialised as |0>
+        self.k = k
         self.parties = k
         self.state_desc = state_desc
         self.q_state = q_state
@@ -46,7 +46,6 @@ class k_party:
         return total_qudits
 
     #creates a copy of the current k_party state
-    #use the deep copy function here?
     def copy(self):
         return
 
