@@ -22,8 +22,7 @@ class EntanglementMeasures:
     def get_le_upper_bound(self):
         return
 
-    def nursing_index(self):
-        
+    def nursing_index(self, quantum_state):
         optimiser.compute_nursing_index()
         return
 
