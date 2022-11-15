@@ -15,14 +15,14 @@ class EntanglementMeasures:
         return
 
     #lower bound for localisable entanglement
-    def get_le_lower_bound(self):
+    def get_le_lower_bound(self, quantum_state, partyA, partyB):
         return
 
     #upper bound for localisable entanglement
-    def get_le_upper_bound(self):
+    def get_le_upper_bound(self, quantum_state, partyA, partyB):
         return
 
-    def nursing_index(self, quantum_state):
+    def nursing_index(self, quantum_state,  partyA, partyB):
         optimiser.compute_nursing_index()
         return
 
