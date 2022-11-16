@@ -16,3 +16,4 @@ def GHZ(dims):
 
 em = EntanglementMeasures(2, GHZ(2), 2)
 em.get_le_upper_bound(GHZ(2), 0, 1)
+em.get_le_lower_bound(GHZ(2), 0, 1)
