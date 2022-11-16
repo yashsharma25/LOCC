@@ -1,6 +1,10 @@
 import qiskit
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
+import numpy as np
+from qiskit.quantum_info import shannon_entropy
+from scipy.linalg.misc import norm
+
 
 class k_party:
     '''
@@ -22,7 +26,11 @@ class k_party:
         self.k = k
         self.parties = k
         self.state_desc = state_desc
+
         self.q_state = q_state
+        self.all_possible_posteriors = []
+        self.projectors = []
+        self.init_projectors()
 
     #get the Hilbert space dimension of the k-party state
     def dims(self):
@@ -101,3 +109,70 @@ class k_party:
     #check if two k_party states are locally clifford equivalent
     def lc_equivalence(self, other_k_party_state):
         return False
+    
+    def init_projectors(self):
+        for i in range(0, self.k, 1):
+            basis = np.zeros((self.k, 1))
+            basis[i] = 1
+            proj = basis @ basis.T
+            self.projectors.append(proj)
+
+    '''@param
+    state = The entire quantum state
+    i = which qudit to measure
+    j = the basis state
+    '''
+    def project(self, i, j):
+        projected = np.tensordot(self.projectors[j], self.q_state, (1,i))
+        return np.moveaxis(projected, 0, i)
+
+    #measure the 'i'th qudit in n basis
+    #return probability and posterior states
+    def measure(self, i):
+        basis_states = np.arange(0, self.k)
+        probs = []
+        projections = []
+
+        for b in range(self.k):
+            projected = self.project(i, b)
+            projections.append(projected)
+            norm_projected = norm(projected.flatten()) 
+            probs.append(norm_projected**2)
+
+        print("Probabilities = ", probs)
+        
+        found_in_basis = np.random.choice(basis_states, 1, p=probs)[0]
+        #projected = self.project(i, b)
+        self.q_state = projections[found_in_basis] / np.sqrt(probs[found_in_basis])
+        return found_in_basis, probs[found_in_basis]
+    
+    def measure_all_possible_posteriors(self, i):
+        basis_states = np.arange(0, self.k)
+        probs = []
+        projections = []
+
+        for b in range(self.k):
+            projected = self.project(i, b)
+            projections.append(projected)
+            norm_projected = norm(projected.flatten()) 
+            probs.append(norm_projected**2)
+
+        for b in basis_states:
+            #tuple of state, probability
+            self.all_possible_posteriors.append((projections[b] / np.sqrt(probs[b]), probs[b]))
+
+        return self.all_possible_posteriors
+
+    def entanglement_entropy(self):
+        return self.E.entropy_using_singular_values(self.q_state)
+
+    def entanglement_entropy_for_state(self, state):
+        u, singular_values, vT = np.linalg.svd(state)
+
+        squared_singular_vals = np.square(singular_values)
+
+        #shannon_entropy accepts a probability vector as input
+        #singular values sum up to 1 and all elements are >= 0 so it is a probability vector
+        entanglement_entropy = shannon_entropy(squared_singular_vals, base=2)
+
+        return entanglement_entropy

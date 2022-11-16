@@ -1,18 +1,20 @@
-from scipy.linalg import svdvals
-from scipy.stats import entropy
-from scipy.sparse.linalg import svds
-from scipy.linalg import expm, sinm, cosm
+from scipy.linalg import expm
 from example_ghz import GHZ
+from k_party import k_party
+from scipy import optimize
 
 import numpy as np
 
 class optimiser:
-    def __init__(self, N, psi):
+    def __init__(self, N, psi, party_to_measure):
         self.N = N
         self.psi = psi
+        self.party_to_measure = party_to_measure
 
     def compute_nursing_index(self, v):
         self.psi = self.psi
+
+        #generate unitary matrix
         M = np.zeros((self.N, self.N), dtype = complex)
         for i in range(0,  self.N):
             M[i][i] = v[i]
@@ -26,17 +28,22 @@ class optimiser:
 
         U = expm(1j * M)
 
-        m = np.kron(np.eye(self.N), np.eye(self.N))
+        if (self.party_to_measure == 2):
+            m = np.kron(np.kron(np.eye(self.N), np.eye(self.N)), U)
 
-        m = np.kron(m, U)
+        elif (self.party_to_measure == 1):
+            m = np.kron(np.kron(np.eye(self.N), U), np.eye(self.N))
 
-        #measure Charlie's qubit
+        elif (self.party_to_measure == 0):
+            m = np.kron(np.kron(U, np.eye(self.N)), np.eye(self.N))
+
         self.psi = m @ self.psi.flatten()
 
         self.psi = self.psi.reshape((self.N, self.N, self.N))
 
         #measure
-        self.measure_all_possible_posteriors(2)
+        q = k_party(self.N, None, self.psi)
+        q.measure_all_possible_posteriors(self.party_to_measure)
         
         entropies = []
         probabilities = []
@@ -46,30 +53,13 @@ class optimiser:
             entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N, self.N**2)))
             probabilities.append(state[1])
             posteriors.append(state[0].reshape(self.N,  self.N ** 2))
-        #print("Entropies = ", r.entropies)
 
         #compute weighted average
         avg_entropy = np.dot(probabilities, entropies)
-        #print(-1 * avg_entropy)
         return -1 * avg_entropy
 
-    def generate_unitary(self, v):
-        M = np.zeros((N,N), dtype = complex)
-        for i in range(0, N):
-            M[i][i] = v[i]
-        
-        #first N elements are diagonal elements, hence start from Nth index 
-        vector_index = N
-        for row in range(0, N-1):
-            #take care of the element and its conjugate transpose
-            #only run over the upper triangular
-            for column in range(row + 1, N):
-                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
-                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
-                vector_index += 2
-       
-        U = expm(1j * M)
-        return U
-
-opt = optimiser(3, GHZ(3))
-opt.compute_nursing_index(np.random.uniform(0, 2*np.pi, 9))
+opt = optimiser(2, GHZ(2), 2)
+v = np.random.uniform(0, 2*np.pi, 4)
+res = optimize.minimize(opt.compute_nursing_index, v, method='nelder-mead',
+                options={'xatol': 1e-8, 'disp': True})
+print("Entanglement entropy = ", -1 * res.fun)
