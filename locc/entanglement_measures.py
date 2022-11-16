@@ -14,7 +14,7 @@ class EntanglementMeasures:
         self.psi = psi
         self.party_to_measure = party_to_measure
 
-    def compute_nursing_index(self, v):
+    def maximise_le(self, v):
         self.psi = self.psi
 
         #generate unitary matrix
@@ -77,8 +77,18 @@ class EntanglementMeasures:
 
     #upper bound for localisable entanglement
     def get_le_upper_bound(self, quantum_state, partyA, partyB):
+        self.psi = quantum_state
+        if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
+            self.party_to_measure = 2
+
+        if ((partyA == 0 and partyB == 2) or (partyA == 2 and partyB == 0)):
+            self.party_to_measure = 1
+
+        if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
+            self.party_to_measure = 0
+
         v = np.random.uniform(0, 2*np.pi, 4)
-        res = optimize.minimize(self.compute_nursing_index, v, method='nelder-mead',
+        res = optimize.minimize(self.maximise_le, v, method='nelder-mead',
                         options={'xatol': 1e-8, 'disp': True})
         print("Entanglement entropy = ", -1 * res.fun)
         return -1 * res.fun
