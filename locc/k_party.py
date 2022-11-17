@@ -112,8 +112,8 @@ class k_party:
         return False
     
     def init_projectors(self):
-        for i in range(0, self.k, 1):
-            basis = np.zeros((self.k, 1))
+        for i in range(0, self.dims, 1):
+            basis = np.zeros((self.dims, 1))
             basis[i] = 1
             proj = basis @ basis.T
             self.projectors.append(proj)
@@ -130,11 +130,11 @@ class k_party:
     #measure the 'i'th qudit in n basis
     #return probability and posterior states
     def measure(self, i):
-        basis_states = np.arange(0, self.k)
+        basis_states = np.arange(0, self.dims)
         probs = []
         projections = []
 
-        for b in range(self.k):
+        for b in range(self.dims):
             projected = self.project(i, b)
             projections.append(projected)
             norm_projected = norm(projected.flatten()) 
@@ -148,11 +148,11 @@ class k_party:
         return found_in_basis, probs[found_in_basis]
     
     def measure_all_possible_posteriors(self, i):
-        basis_states = np.arange(0, self.k)
+        basis_states = np.arange(0, self.dims)
         probs = []
         projections = []
 
-        for b in range(self.k):
+        for b in range(self.dims):
             projected = self.project(i, b)
             projections.append(projected)
             norm_projected = norm(projected.flatten()) 
