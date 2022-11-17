@@ -24,8 +24,8 @@ class EntanglementMeasures:
         return
 
     #lower bound for localisable entanglement
-    def get_le_lower_bound(self, quantum_state, partyA, partyB):
-        self.psi = quantum_state
+    def get_le_lower_bound(self, k_party_obj, partyA, partyB):
+        self.psi = k_party_obj.q_state
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
             self.party_to_measure = 2
 
@@ -42,8 +42,8 @@ class EntanglementMeasures:
         return res.fun
 
     #upper bound for localisable entanglement
-    def get_le_upper_bound(self, quantum_state, partyA, partyB):
-        self.psi = quantum_state
+    def get_le_upper_bound(self, k_party_obj, partyA, partyB):
+        self.psi = k_party_obj.q_state
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
             self.party_to_measure = 2
 
