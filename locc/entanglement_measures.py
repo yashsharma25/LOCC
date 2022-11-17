@@ -10,6 +10,7 @@ from k_party import k_party
 
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
+        self.k_party_obj = None
         self.N = N
         self.psi = psi
         self.party_to_measure = party_to_measure
@@ -25,7 +26,9 @@ class EntanglementMeasures:
 
     #lower bound for localisable entanglement
     def get_le_lower_bound(self, k_party_obj, partyA, partyB):
-        self.psi = k_party_obj.q_state
+        self.k_party_obj = k_party_obj
+        self.psi = self.k_party_obj.q_state
+
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
             self.party_to_measure = 2
 
@@ -43,7 +46,9 @@ class EntanglementMeasures:
 
     #upper bound for localisable entanglement
     def get_le_upper_bound(self, k_party_obj, partyA, partyB):
-        self.psi = k_party_obj.q_state
+        self.k_party_obj = k_party_obj
+
+        self.psi = self.k_party_obj.q_state
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
             self.party_to_measure = 2
 
@@ -129,7 +134,7 @@ class EntanglementMeasures:
         self.psi = self.psi.reshape((self.N, self.N, self.N))
 
         #measure
-        q = k_party(self.N, self.N, None, self.psi)
+        q = k_party(self.k_party_obj.k, self.N, None, self.psi)
         q.measure_all_possible_posteriors(self.party_to_measure)
         
         entropies = []
@@ -180,7 +185,7 @@ class EntanglementMeasures:
         self.psi = self.psi.reshape((self.N, self.N, self.N))
 
         #measure
-        q = k_party(self.N, self.N, None, self.psi)
+        q = k_party(self.k_party_obj.k, self.N, None, self.psi)
         q.measure_all_possible_posteriors(self.party_to_measure)
         
         entropies = []
