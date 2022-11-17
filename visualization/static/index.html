@@ -27,24 +27,29 @@ let svg = d3.select("body").append("svg")
 
 let linkTypes={
   max:{
-    init:(selection)=>{selection.attr("stroke-opacity", 0.4)},
-    update:(selection)=>{selection.attr("stroke-width",(d)=>d.max*10)}
+    init:(g)=>{g.attr("stroke-opacity", 0.4).attr("stroke", "#999")},
+    update:(selection)=>{selection.attr("stroke-width",(d)=>d.max*18)}
   },
   min:{
-    init:(selection)=>{selection.attr("stroke-opacity", 0.9)},
-    update:(selection)=>{selection.attr("stroke-width",(d)=>d.min*10)}
+    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#444")},
+    update:(selection)=>{selection.attr("stroke-width",(d)=>d.min*18)}
   }
 
 }
 
 for(let type in linkTypes){
-  linkTypes[type].selection=svg.append("g")
+  console.log(type);
+  let g=svg.append("g")
       .attr("stroke-width",1)
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
-      .attr("stroke-linecap", "round")
-    .selectAll("line");
-  linkTypes[type].init(linkTypes[type].selection);
+      .attr("stroke-linecap", "round");
+
+    linkTypes[type].selection=g.selectAll("line");
+    if(linkTypes[type].init){
+      linkTypes[type].init(g);
+    }
+
 }
 
 
