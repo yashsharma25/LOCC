@@ -10,13 +10,15 @@ import requests
 import mimetypes
 from flask import Flask
 from flask import Response
+from flask import request
 
 import webbrowser
 import threading
 import time
 
-from entanglement_measures import EntanglementMeasures
 from k_party import k_party
+from entanglement_measures import EntanglementMeasures
+
 
 
 alice_nodes=1
@@ -51,13 +53,14 @@ def graph_state_from_qiskit(graph):
     return results
     
 
+state_name="ghz"
 
-def prepare_state_data(state_vector):
+def prepare_state_data(state_vector,name):
     tri_party=k_party(3,2,[(1,[2]),(1,[2]),(1,[2])],state_vector)
     state_obj=[{"re":x.real,"im":x.imag} for x in state_vector]
     dims=state_vector.dims()
     e_stats={}
-    o={"state":state_obj,"parties":len(dims),"dims":dims,
+    o={"state":state_obj,"name":name,"parties":len(dims),"dims":dims,
    "e_stats":e_stats}
     em = EntanglementMeasures(2, tri_party, 2)
     for i in range(len(dims)):
@@ -70,23 +73,34 @@ def prepare_state_data(state_vector):
     result=json.dumps(o)
     return result
 
-        
-state_vector=ghz_state_from_qiskit()
-#state_vector=w_state_from_qiskit() 
-#state_vector=graph_state_from_qiskit(graph)
 
-state_data=prepare_state_data(state_vector)
+states={"ghz":prepare_state_data(ghz_state_from_qiskit(),"ghz"),
+        "w":prepare_state_data(w_state_from_qiskit(),"w"),
+       "graph":prepare_state_data(graph_state_from_qiskit(graph),"graph")}
 
 app = Flask(__name__,static_url_path='')
-
 
 @app.route('/')
 def index(): 
     return app.send_static_file('index.html')
 
+@app.route('/favicon.ico')
+def favicon(): 
+    return app.send_static_file('favicon.ico')
+
+@app.route('/<name>')
+def index_state(name): 
+    global state_name 
+    state_name = name
+    #if state_name not in states: state_name="ghz"
+    print(name, state_name)
+    return app.send_static_file('index.html')
+
 @app.route("/state.json")
 def send_state():
-    return Response(state_data, mimetype='application/json')
+    global state_name 
+    print(state_name)
+    return Response(states[state_name], mimetype='application/json')
 
 def open_browser():
     time.sleep(1)
@@ -98,4 +112,5 @@ thread.start()
         
 
 app.run(host='0.0.0.0', port=3000)
+
 
