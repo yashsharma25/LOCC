@@ -21,9 +21,10 @@ class k_party:
     '''
 
     #qState can be a statevector, densityMatrix, quantumCircuit or graph state. All 4 descriptions will be supported
-    def __init__(self, k, state_desc, q_state):
+    def __init__(self, k, dims, state_desc, q_state):
         #all the qudits will be intialised as |0>
         self.k = k
+        self.dims = dims
         self.parties = k
         self.state_desc = state_desc
 

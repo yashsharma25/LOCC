@@ -129,7 +129,7 @@ class EntanglementMeasures:
         self.psi = self.psi.reshape((self.N, self.N, self.N))
 
         #measure
-        q = k_party(self.N, None, self.psi)
+        q = k_party(self.N, self.N, None, self.psi)
         q.measure_all_possible_posteriors(self.party_to_measure)
         
         entropies = []
@@ -180,7 +180,7 @@ class EntanglementMeasures:
         self.psi = self.psi.reshape((self.N, self.N, self.N))
 
         #measure
-        q = k_party(self.N, None, self.psi)
+        q = k_party(self.N, self.N, None, self.psi)
         q.measure_all_possible_posteriors(self.party_to_measure)
         
         entropies = []
