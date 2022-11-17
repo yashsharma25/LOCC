@@ -104,7 +104,7 @@ class EntanglementMeasures:
 
     
     def minimise_le(self, v):
-        self.psi = self.psi
+        self.psi = self.k_party_obj.q_state
 
         #generate unitary matrix
         M = np.zeros((self.N, self.N), dtype = complex)
@@ -155,7 +155,7 @@ class EntanglementMeasures:
 
 
     def maximise_le(self, v):
-        self.psi = self.psi
+        self.psi = self.k_party_obj.q_state
 
         #generate unitary matrix
         M = np.zeros((self.N, self.N), dtype = complex)

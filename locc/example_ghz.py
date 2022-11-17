@@ -10,7 +10,7 @@ def GHZ(dims):
     ghz = Statevector(psi.flatten())
 
     print(ghz)
-    return psi
+    return ghz
     #print("Norm of state =", norm(psi.flatten()))
 
 #now we compute the nursing numbers for this state

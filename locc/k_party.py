@@ -28,7 +28,13 @@ class k_party:
         self.parties = k
         self.state_desc = state_desc
 
-        self.q_state = q_state
+        #quantum state is a qiskit statevector
+        if isinstance(q_state,Statevector):
+            self.q_state = q_state.data
+
+        else:
+            self.q_state = q_state
+
         self.all_possible_posteriors = []
         self.projectors = []
         self.init_projectors()
