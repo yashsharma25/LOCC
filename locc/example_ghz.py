@@ -17,5 +17,5 @@ def GHZ(dims):
 k_party_obj = k_party(3, 2, None, GHZ(2))
 
 em = EntanglementMeasures(2, GHZ(2), 2)
-em.get_le_upper_bound(k_party_obj, 0, 1)
-em.get_le_lower_bound(k_party_obj, 0, 1)
+em.get_le_upper_bound(k_party_obj, 0, 2)
+em.get_le_lower_bound(k_party_obj, 0, 2)

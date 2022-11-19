@@ -120,22 +120,23 @@ class EntanglementMeasures:
 
         U = expm(1j * M)
 
-        if (self.party_to_measure == 2):
-            m = np.kron(np.kron(np.eye(self.N), np.eye(self.N)), U)
+        # if (self.party_to_measure == 2):
+        #     m = np.kron(np.kron(np.eye(self.N), np.eye(self.N)), U)
 
-        elif (self.party_to_measure == 1):
-            m = np.kron(np.kron(np.eye(self.N), U), np.eye(self.N))
+        # elif (self.party_to_measure == 1):
+        #     m = np.kron(np.kron(np.eye(self.N), U), np.eye(self.N))
 
-        elif (self.party_to_measure == 0):
-            m = np.kron(np.kron(U, np.eye(self.N)), np.eye(self.N))
+        # elif (self.party_to_measure == 0):
+        #     m = np.kron(np.kron(U, np.eye(self.N)), np.eye(self.N))
 
-        self.psi = m @ self.psi.flatten()
+        # self.psi = m @ self.psi.flatten()
 
-        self.psi = self.psi.reshape((self.N, self.N, self.N))
+        # self.psi = self.psi.reshape((self.N, self.N, self.N))
 
         #measure
+        self.psi = self.psi.evolve(U, [self.party_to_measure])
         q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-        q.measure_all_possible_posteriors(self.party_to_measure)
+        q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
         
         entropies = []
         probabilities = []
@@ -149,16 +150,12 @@ class EntanglementMeasures:
 
             else:
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-                posteriors.append(state[0].reshape(self.N ** 2, self.N))
-
-
+                posteriors.append(state[0].reshape(self.N ** 2,  self.N))
+                
             probabilities.append(state[1])
 
         #compute weighted average
-        #print("Entropies = ", entropies)
         avg_entropy = np.dot(probabilities, entropies)
-        #print("Avg = ", avg_entropy)
-
         return avg_entropy
 
 
@@ -179,22 +176,10 @@ class EntanglementMeasures:
 
         U = expm(1j * M)
 
-        if (self.party_to_measure == 2):
-            m = np.kron(np.kron(np.eye(self.N), np.eye(self.N)), U)
-
-        elif (self.party_to_measure == 1):
-            m = np.kron(np.kron(np.eye(self.N), U), np.eye(self.N))
-
-        elif (self.party_to_measure == 0):
-            m = np.kron(np.kron(U, np.eye(self.N)), np.eye(self.N))
-
-        self.psi = m @ self.psi.flatten()
-
-        self.psi = self.psi.reshape((self.N, self.N, self.N))
-
         #measure
+        self.psi = self.psi.evolve(U, [self.party_to_measure])
         q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-        q.measure_all_possible_posteriors(self.party_to_measure)
+        q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
         
         entropies = []
         probabilities = []
@@ -204,7 +189,6 @@ class EntanglementMeasures:
             if (self.party_to_measure == 0):
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
                 posteriors.append(state[0].reshape(self.N,  self.N ** 2))
-
 
             else:
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
