@@ -27,17 +27,9 @@ class k_party:
         self.dims = dims
         self.parties = k
         self.state_desc = state_desc
-
-        #quantum state is a qiskit statevector
-        if isinstance(q_state,Statevector):
-            self.q_state = q_state.data
-
-        else:
-            self.q_state = q_state
+        self.q_state = q_state
 
         self.all_possible_posteriors = []
-        self.projectors = []
-        self.init_projectors()
 
     #get the Hilbert space dimension of the k-party state
     def dims(self):
@@ -117,56 +109,15 @@ class k_party:
     def lc_equivalence(self, other_k_party_state):
         return False
     
-    def init_projectors(self):
-        for i in range(0, self.dims, 1):
-            basis = np.zeros((self.dims, 1))
-            basis[i] = 1
-            proj = basis @ basis.T
-            self.projectors.append(proj)
+    def measure_all_possible_posteriors_qiskit(self, qubit_to_measure):
+        outcomes = []
 
-    '''@param
-    state = The entire quantum state
-    i = which qudit to measure
-    j = the basis state
-    '''
-    def project(self, i, j):
-        projected = np.tensordot(self.projectors[j], self.q_state, (1,i))
-        return np.moveaxis(projected, 0, i)
-
-    #measure the 'i'th qudit in n basis
-    #return probability and posterior states
-    def measure(self, i):
-        basis_states = np.arange(0, self.dims)
-        probs = []
-        projections = []
-
-        for b in range(self.dims):
-            projected = self.project(i, b)
-            projections.append(projected)
-            norm_projected = norm(projected.flatten()) 
-            probs.append(norm_projected**2)
-
-        print("Probabilities = ", probs)
-        
-        found_in_basis = np.random.choice(basis_states, 1, p=probs)[0]
-        #projected = self.project(i, b)
-        self.q_state = projections[found_in_basis] / np.sqrt(probs[found_in_basis])
-        return found_in_basis, probs[found_in_basis]
-    
-    def measure_all_possible_posteriors(self, i):
-        basis_states = np.arange(0, self.dims)
-        probs = []
-        projections = []
-
-        for b in range(self.dims):
-            projected = self.project(i, b)
-            projections.append(projected)
-            norm_projected = norm(projected.flatten()) 
-            probs.append(norm_projected**2)
-
-        for b in basis_states:
-            #tuple of state, probability
-            self.all_possible_posteriors.append((projections[b] / np.sqrt(probs[b]), probs[b]))
+        while len(outcomes) < 2:
+            outcome, state = self.q_state.measure([qubit_to_measure])
+            if outcome not in outcomes:
+                outcomes.append(outcome)
+                prob = self.q_state.probabilities([qubit_to_measure])[int(outcome)]
+                self.all_possible_posteriors.append((state.data, prob))
 
         return self.all_possible_posteriors
 
