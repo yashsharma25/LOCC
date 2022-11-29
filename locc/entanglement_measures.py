@@ -12,6 +12,10 @@ class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
         self.k_party_obj = None
         self.N = N
+        if hasattr(psi, "__len__"):
+            #this is an array
+            self.psi = psi[0]
+
         self.psi = psi
         self.party_to_measure = party_to_measure
         self.starting_parameters = []
