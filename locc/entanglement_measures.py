@@ -74,43 +74,6 @@ class EntanglementMeasures:
     The party on which measurement is performed should be same for all states
     '''
     def get_le_upper_bound_evolving(self, arr, partyA, partyB):
-        min_le_array = []
-
-        if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
-                self.party_to_measure = 2
-
-        if ((partyA == 0 and partyB == 2) or (partyA == 2 and partyB == 0)):
-            self.party_to_measure = 1
-
-        if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
-            self.party_to_measure = 0
-
-        v = np.random.uniform(0, 2*np.pi, 4)
-        self.starting_parameters = v
-
-        for k_party_obj in arr:
-            self.k_party_obj = k_party_obj
-
-            self.psi = self.k_party_obj.q_state
-            
-            #start the optimisation using the final optimised parameters of the last state
-            res = optimize.minimize(self.maximise_le, self.starting_parameters, method='nelder-mead',
-                            options={'xatol': 1e-8, 'disp': True})
-            print("Entanglement entropy = ", -1 * res.fun)
-            min_le_array.append(res.fun)
-        
-        return min_le_array
-
-    '''
-    Input: An array of k_party objects
-    Output: An array of minimum localizable entanglement for each state in the input array
-
-    Use final optimisation parameters of the previous state as the initial parameters for the next state
-
-    The party on which measurement is performed should be same for all states
-
-    '''    
-    def get_le_lower_bound_evolving(self, arr, partyA, partyB):
         max_le_array = []
 
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
@@ -134,9 +97,49 @@ class EntanglementMeasures:
             res = optimize.minimize(self.maximise_le, self.starting_parameters, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
             print("Entanglement entropy = ", -1 * res.fun)
-            max_le_array.append(-1 * res.fun)
+            max_le_array.append(-res.fun)
         
+        print("max =", max_le_array)
+
         return max_le_array
+
+    '''
+    Input: An array of k_party objects
+    Output: An array of minimum localizable entanglement for each state in the input array
+
+    Use final optimisation parameters of the previous state as the initial parameters for the next state
+
+    The party on which measurement is performed should be same for all states
+
+    '''    
+    def get_le_lower_bound_evolving(self, arr, partyA, partyB):
+        min_le_array = []
+
+        if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
+                self.party_to_measure = 2
+
+        if ((partyA == 0 and partyB == 2) or (partyA == 2 and partyB == 0)):
+            self.party_to_measure = 1
+
+        if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
+            self.party_to_measure = 0
+
+        v = np.random.uniform(0, 2*np.pi, 4)
+        self.starting_parameters = v
+
+        for k_party_obj in arr:
+            self.k_party_obj = k_party_obj
+
+            self.psi = self.k_party_obj.q_state
+            
+            #start the optimisation using the final optimised parameters of the last state
+            res = optimize.minimize(self.minimise_le, self.starting_parameters, method='nelder-mead',
+                            options={'xatol': 1e-8, 'disp': True})
+            print("Entanglement entropy = ", res.fun)
+            min_le_array.append(res.fun)
+        
+        print("min =", min_le_array)
+        return min_le_array
 
     def nursing_index(self, quantum_state,  partyA, partyB):
         return
