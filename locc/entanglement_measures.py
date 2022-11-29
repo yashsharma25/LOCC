@@ -14,6 +14,7 @@ class EntanglementMeasures:
         self.N = N
         self.psi = psi
         self.party_to_measure = party_to_measure
+        self.starting_parameters = []
 
     def entanglement_entropy(self, quantum_state):
         return
@@ -63,6 +64,64 @@ class EntanglementMeasures:
                         options={'xatol': 1e-8, 'disp': True})
         print("Entanglement entropy = ", -1 * res.fun)
         return -1 * res.fun
+
+    #upper bound for localisable entanglement
+    def get_le_upper_bound_evolving(self, arr, partyA, partyB):
+        min_le_array = []
+
+        if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
+                self.party_to_measure = 2
+
+        if ((partyA == 0 and partyB == 2) or (partyA == 2 and partyB == 0)):
+            self.party_to_measure = 1
+
+        if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
+            self.party_to_measure = 0
+
+        v = np.random.uniform(0, 2*np.pi, 4)
+        self.starting_parameters = v
+
+        for k_party_obj in arr:
+            self.k_party_obj = k_party_obj
+
+            self.psi = self.k_party_obj.q_state
+            
+            #start the optimisation using the final optimised parameters of the last state
+            res = optimize.minimize(self.maximise_le, self.starting_parameters, method='nelder-mead',
+                            options={'xatol': 1e-8, 'disp': True})
+            print("Entanglement entropy = ", -1 * res.fun)
+            min_le_array.append(res.fun)
+        
+        return min_le_array
+
+         #upper bound for localisable entanglement
+    def get_le_lower_bound_evolving(self, arr, partyA, partyB):
+        max_le_array = []
+
+        if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
+                self.party_to_measure = 2
+
+        if ((partyA == 0 and partyB == 2) or (partyA == 2 and partyB == 0)):
+            self.party_to_measure = 1
+
+        if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
+            self.party_to_measure = 0
+
+        v = np.random.uniform(0, 2*np.pi, 4)
+        self.starting_parameters = v
+
+        for k_party_obj in arr:
+            self.k_party_obj = k_party_obj
+
+            self.psi = self.k_party_obj.q_state
+            
+            #start the optimisation using the final optimised parameters of the last state
+            res = optimize.minimize(self.maximise_le, self.starting_parameters, method='nelder-mead',
+                            options={'xatol': 1e-8, 'disp': True})
+            print("Entanglement entropy = ", -1 * res.fun)
+            max_le_array.append(-1 * res.fun)
+        
+        return max_le_array
 
     def nursing_index(self, quantum_state,  partyA, partyB):
         return
@@ -120,19 +179,6 @@ class EntanglementMeasures:
 
         U = expm(1j * M)
 
-        # if (self.party_to_measure == 2):
-        #     m = np.kron(np.kron(np.eye(self.N), np.eye(self.N)), U)
-
-        # elif (self.party_to_measure == 1):
-        #     m = np.kron(np.kron(np.eye(self.N), U), np.eye(self.N))
-
-        # elif (self.party_to_measure == 0):
-        #     m = np.kron(np.kron(U, np.eye(self.N)), np.eye(self.N))
-
-        # self.psi = m @ self.psi.flatten()
-
-        # self.psi = self.psi.reshape((self.N, self.N, self.N))
-
         #measure
         self.psi = self.psi.evolve(U, [self.party_to_measure])
         q = k_party(self.k_party_obj.k, self.N, None, self.psi)
@@ -160,6 +206,49 @@ class EntanglementMeasures:
 
 
     def maximise_le(self, v):
+        self.psi = self.k_party_obj.q_state
+
+        #generate unitary matrix
+        M = np.zeros((self.N, self.N), dtype = complex)
+        for i in range(0,  self.N):
+            M[i][i] = v[i]
+        
+        vector_index = self.N
+        for row in range(0,  self.N - 1):
+            for column in range(row + 1,  self.N):
+                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
+                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
+                vector_index += 2
+
+        U = expm(1j * M)
+
+        #measure
+        self.psi = self.psi.evolve(U, [self.party_to_measure])
+        q = k_party(self.k_party_obj.k, self.N, None, self.psi)
+        q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
+        
+        entropies = []
+        probabilities = []
+        posteriors = []
+
+        for state in q.all_possible_posteriors:
+            if (self.party_to_measure == 0):
+                entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
+                posteriors.append(state[0].reshape(self.N,  self.N ** 2))
+
+            else:
+                entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
+                posteriors.append(state[0].reshape(self.N ** 2,  self.N))
+                
+            probabilities.append(state[1])
+
+        #compute weighted average
+        avg_entropy = np.dot(probabilities, entropies)
+        self.starting_parameters = v
+        return -1 * avg_entropy
+
+
+    def maximise_le_multiparty(self, v):
         self.psi = self.k_party_obj.q_state
 
         #generate unitary matrix
