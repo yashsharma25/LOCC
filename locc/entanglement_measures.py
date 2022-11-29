@@ -65,7 +65,14 @@ class EntanglementMeasures:
         print("Entanglement entropy = ", -1 * res.fun)
         return -1 * res.fun
 
-    #upper bound for localisable entanglement
+    '''
+    Input: An array of k_party objects.
+    Output: An array of maximum localizable entanglement for each state in the input array
+
+    Use final optimisation parameters of the previous state as the initial parameters for the next state
+
+    The party on which measurement is performed should be same for all states
+    '''
     def get_le_upper_bound_evolving(self, arr, partyA, partyB):
         min_le_array = []
 
@@ -94,7 +101,15 @@ class EntanglementMeasures:
         
         return min_le_array
 
-         #upper bound for localisable entanglement
+    '''
+    Input: An array of k_party objects
+    Output: An array of minimum localizable entanglement for each state in the input array
+
+    Use final optimisation parameters of the previous state as the initial parameters for the next state
+
+    The party on which measurement is performed should be same for all states
+
+    '''    
     def get_le_lower_bound_evolving(self, arr, partyA, partyB):
         max_le_array = []
 
