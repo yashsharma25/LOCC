@@ -165,13 +165,14 @@ def prepare_state_data2(q_state,name="untitled"):
 
 
 states={
-    "ghz":prepare_state_data(ghz_state_from_qiskit(),"ghz"),
+        "ghz":prepare_state_data(ghz_state_from_qiskit(),"ghz"),
         "w":prepare_state_data(w_state_from_qiskit(),"w"),
         "epr":prepare_state_data(epr_state_from_qiskit(),"epr"),
-       "graph":prepare_state_data(graph_state_from_qiskit(graph),"graph"),
+        "000":prepare_state_data(custom_state_from_qiskit([1,0,0,0,0,0,0,0]),"000"),
+        "graph":prepare_state_data(graph_state_from_qiskit(graph),"graph"),
         "test":test_state_data(),
         "changing":prepare_state_data_evolving(ghz_state_from_qiskit(),w_state_from_qiskit(),"changing")
-       }
+    }
 user_state=states["changing"]
 
 app = Flask(__name__,static_url_path='')
@@ -198,11 +199,11 @@ def index_state(name):
     else:
         strs=name.split(",") #eg. each number is like 1+2j
         array=[complex(x) for x in strs]
-        user_state=prepare_state_data(graph_state_from_qiskit(graph),name)
+        user_state=prepare_state_data(custom_state_from_qiskit(array),name)
         state_name=name
         states[name]=user_state
     #if state_name not in states: state_name="ghz"
-    print(name, state_name)
+    print(name, state_name,array)
     return app.send_static_file('index.html')
 
 @app.route("/state.json")
