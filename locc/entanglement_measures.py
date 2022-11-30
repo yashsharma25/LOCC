@@ -204,7 +204,7 @@ class EntanglementMeasures:
         posteriors = []
 
         for state in q.all_possible_posteriors:
-            if (self.party_to_measure == 0):
+            if (self.party_to_measure == 2):
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
                 posteriors.append(state[0].reshape(self.N,  self.N ** 2))
 
@@ -247,14 +247,14 @@ class EntanglementMeasures:
         posteriors = []
 
         for state in q.all_possible_posteriors:
-            if (self.party_to_measure == 0):
+            if (self.party_to_measure == 2):
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
                 posteriors.append(state[0].reshape(self.N,  self.N ** 2))
 
             else:
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
                 posteriors.append(state[0].reshape(self.N ** 2,  self.N))
-                
+            
             probabilities.append(state[1])
 
         #compute weighted average
