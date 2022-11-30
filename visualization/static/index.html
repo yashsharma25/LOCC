@@ -15,6 +15,7 @@ let forceNode = d3.forceManyBody().strength(-400);
 let forceLink = d3.forceLink([]).id((x) => x.id).distance(500);
 
 let simulation = d3.forceSimulation()
+    .alphaTarget(0.2)
     .force("link", forceLink)
     .force("charge", forceNode)
     .force("center",  d3.forceCenter())
@@ -25,10 +26,52 @@ let svg = d3.select("body").append("svg")
         .attr("height", height)
         .attr("viewBox", [-width / 2, -height / 2, width, height])
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;");
-
+let nodeRadius=20;
 let linkWidth=48;
 let minPeriod=1500,addedPeriod=0;
 let timestep=0,time=0,maxtimestep=100;
+
+let nodeTypes={
+  node:{
+    type:"circle",
+    init:(g)=>{
+      g.attr("stroke-width", 3);
+    },
+    update:(selection)=>{
+          selection
+          .attr("r", nodeRadius)
+          .call(drag(simulation));
+          ;
+    },
+    tick:(selection)=>{
+      selection
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+    }
+  },
+  label:{
+    type:"text",
+    init:(g)=>{
+      g.text(function(d) {
+        return d&&d.id;
+      })
+      .style('stroke', '#fff')
+      .style('fill', '#000')
+      .style('font-size', '16px')
+      .attr('x', 6)
+      .attr('y', 3);
+    },
+    update:(selection)=>{selection.text(function(d) {
+        return d.id;
+      })
+    },
+    tick:(selection)=>{
+      selection
+        .attr("x", d => d.x-3)
+        .attr("y", d => d.y+3);
+    }
+  }
+}
 let linkTypes={
   outline:{
     init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#eee")},
@@ -44,7 +87,7 @@ let linkTypes={
   min:{
     init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#35a")},
     update:(selection)=>{
-      selection.attr("stroke-width",(d)=>{stateData.is_changing?(d.min[timestep]*linkWidth):(d.min*linkWidth)});
+      selection.attr("stroke-width",(d)=>{(stateData.is_changing)?(d.min[timestep]*linkWidth):(d.min*linkWidth)});
       if(stateData&&(!stateData.is_changing)){
         selection.each((d)=>{
           let period=1000,offset=1000*Math.random();
@@ -59,7 +102,7 @@ let linkTypes={
             .attr("stroke-width",(d)=>d.min*linkWidth)
             .on("end", repeat);
           };
-          //repeat(period,offset);
+          setTimeout(repeat(period,offset),offset);
       });
 
 
@@ -71,6 +114,8 @@ let linkTypes={
   }
 
 }
+
+
 
 for(let type in linkTypes){
   console.log(type);
@@ -87,10 +132,19 @@ for(let type in linkTypes){
 
 }
 
+for(let type in nodeTypes){
+  console.log(type);
+  let elemType=nodeTypes[type].type;
+  let g=svg.append("g");
 
-  let node = svg.append("g")
-      .attr("stroke-width", 3)
-    .selectAll("circle");
+
+    nodeTypes[type].selection=g.selectAll(elemType);
+    if(nodeTypes[type].init){
+      nodeTypes[type].init(g);
+    }
+
+}
+
 
 
 function tick() {
@@ -104,14 +158,19 @@ function tick() {
     if(linkTypes[type].tick){
       linkTypes[type].tick(linkTypes[type].selection);
     }
-    time+=0.09;if(timestep>maxtimestep){time=-maxtimestep-0.1;}
-    timestep=Math.floor(Math.abs(time));
+
 
   }
+  for(let type in nodeTypes){
+    if(nodeTypes[type].tick){
+      nodeTypes[type].tick(nodeTypes[type].selection);
+    }
+  }
 
-  node
-    .attr("cx", d => d.x)
-    .attr("cy", d => d.y);
+
+  time+=0.087;if(time>=maxtimestep){time=-maxtimestep+0.01;}
+  timestep=Math.floor(Math.abs(time));
+
 }
 function drag(simulation) {
   function dragstarted(event) {
@@ -143,15 +202,15 @@ function setData(data){
   simulation.nodes(data.nodes);
   forceLink.links(data.links);
   for(let type in linkTypes){
-    linkTypes[type].selection=linkTypes[type].selection.data(data.links).join("line");
+    linkTypes[type].selection=linkTypes[type].selection.data(data.links).join(linkTypes[type].type||"line");
     linkTypes[type].update(linkTypes[type].selection);
   }
+  for(let type in nodeTypes){
+    nodeTypes[type].selection=nodeTypes[type].selection
+      .data(data.nodes,function(d){return d.id;}).join(nodeTypes[type].type||"circle");
+    nodeTypes[type].update(nodeTypes[type].selection);
+  }
 
-let nodeRadius=18;
-  node = node.data(data.nodes, function(d) { return d.id;}).join("circle")
-    .attr("r", nodeRadius)
-    .call(drag(simulation));
-    ;
 
   simulation.restart();
 }
