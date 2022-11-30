@@ -131,15 +131,12 @@ class EntanglementMeasures:
             self.psi = self.k_party_obj.q_state
             
             #start the optimisation using the final optimised parameters of the last state
-            res = optimize.minimize(self.maximise_le, self.starting_parameters, method='nelder-mead',
+            res = optimize.minimize(self.minimise_le, self.starting_parameters, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
             print("Entanglement entropy = ", -1 * res.fun)
             max_le_array.append(-1 * res.fun)
         
         return max_le_array
-
-    def nursing_index(self, quantum_state,  partyA, partyB):
-        return
 
     def entropy_using_singular_values(self, state):
         u, singular_values, vT = np.linalg.svd(state)
@@ -217,50 +214,13 @@ class EntanglementMeasures:
 
         #compute weighted average
         avg_entropy = np.dot(probabilities, entropies)
+        self.starting_parameters = v
+
         return avg_entropy
 
 
     def maximise_le(self, v):
-        self.psi = self.k_party_obj.q_state
-
-        #generate unitary matrix
-        M = np.zeros((self.N, self.N), dtype = complex)
-        for i in range(0,  self.N):
-            M[i][i] = v[i]
-        
-        vector_index = self.N
-        for row in range(0,  self.N - 1):
-            for column in range(row + 1,  self.N):
-                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
-                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
-                vector_index += 2
-
-        U = expm(1j * M)
-
-        #measure
-        self.psi = self.psi.evolve(U, [self.party_to_measure])
-        q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-        q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
-        
-        entropies = []
-        probabilities = []
-        posteriors = []
-
-        for state in q.all_possible_posteriors:
-            if (self.party_to_measure == 2):
-                entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
-                posteriors.append(state[0].reshape(self.N,  self.N ** 2))
-
-            else:
-                entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-                posteriors.append(state[0].reshape(self.N ** 2,  self.N))
-            
-            probabilities.append(state[1])
-
-        #compute weighted average
-        avg_entropy = np.dot(probabilities, entropies)
-        self.starting_parameters = v
-        return -1 * avg_entropy
+        return -1 * self.minimise_le(v)
 
 
     def maximise_le_multiparty(self, v):
