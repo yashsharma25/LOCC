@@ -39,7 +39,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, 4)
+        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
         res = optimize.minimize(self.minimise_le, v, method='nelder-mead',
                         options={'xatol': 1e-8, 'disp': True})
         print("Entanglement entropy = ", res.fun)
@@ -59,7 +59,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, 4)
+        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
         res = optimize.minimize(self.maximise_le, v, method='nelder-mead',
                         options={'xatol': 1e-8, 'disp': True})
         print("Entanglement entropy = ", -1 * res.fun)
@@ -85,7 +85,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, 4)
+        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
         self.starting_parameters = v
 
         for k_party_obj in arr:
@@ -122,7 +122,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, 4)
+        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
         self.starting_parameters = v
 
         for k_party_obj in arr:
