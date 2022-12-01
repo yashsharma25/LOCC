@@ -7,6 +7,9 @@ from scipy import optimize
 from scipy.linalg import expm
 from k_party import k_party
 
+from qiskit.quantum_info.operators import Operator
+import copy
+
 
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
@@ -191,26 +194,32 @@ class EntanglementMeasures:
 
         U = expm(1j * M)
 
-        #measure
-        self.psi = self.psi.evolve(U, [self.party_to_measure])
-        q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-        q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
+        U_operator = Operator(U)
+        self.psi = self.psi.evolve(U_operator, [self.party_to_measure])
+
+        q = k_party(self.k_party_obj.k, self.k_party_obj.dims, self.k_party_obj.state_desc, self.psi)
+        #print("MEASURE")
+        all_possible_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
         
         entropies = []
         probabilities = []
         posteriors = []
 
-        for state in q.all_possible_posteriors:
+        #print("COMPUTE ENTROPY")
+
+        for state in all_possible_posteriors:
             if (self.party_to_measure == 2):
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
                 posteriors.append(state[0].reshape(self.N,  self.N ** 2))
-
 
             else:
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
                 posteriors.append(state[0].reshape(self.N ** 2,  self.N))
                 
+         
             probabilities.append(state[1])
+            # print("Entropies = ", entropies)
+            # print("Probabilities = ", probabilities)
 
         #compute weighted average
         avg_entropy = np.dot(probabilities, entropies)
@@ -222,41 +231,72 @@ class EntanglementMeasures:
     def maximise_le(self, v):
         return -1 * self.minimise_le(v)
 
+    def get_le_multiple(self, k_party_obj, partyA, partyB):
+        self.k_party_obj = k_party_obj
+        v = np.random.uniform(0, 2*np.pi, 8)
 
-    def maximise_le_multiparty(self, v):
+        if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
+                self.party_to_measure = 2
+
+        if ((partyA == 0 and partyB == 2) or (partyA == 2 and partyB == 0)):
+            self.party_to_measure = 1
+
+        if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
+            self.party_to_measure = 0
+
+        avg_entropy = self.maximise_le_multiqubits(v) 
+
+    def maximise_le_multiqubits(self, v):
         self.psi = self.k_party_obj.q_state
 
-        #generate unitary matrix
-        M = np.zeros((self.N, self.N), dtype = complex)
-        for i in range(0,  self.N):
-            M[i][i] = v[i]
-        
-        vector_index = self.N
-        for row in range(0,  self.N - 1):
-            for column in range(row + 1,  self.N):
-                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
-                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
-                vector_index += 2
+        qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
 
-        U = expm(1j * M)
+        opt_parameters_list = np.array_split(v, qudits_to_measure)
 
-        #measure
-        self.psi = self.psi.evolve(U, [self.party_to_measure])
-        q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-        q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
+        unitaries = []
+        for o in opt_parameters_list:
+            #generate unitary matrix
+            M = np.zeros((self.N, self.N), dtype = complex)
+            for i in range(0,  self.N):
+                M[i][i] = o[i]
+            
+            vector_index = self.N
+            for row in range(0,  self.N - 1):
+                for column in range(row + 1,  self.N):
+                    M[row][column] = o[vector_index] + 1j * o[vector_index+1]
+                    M[column][row] = o[vector_index] - 1j * o[vector_index+1]
+                    vector_index += 2
+
+            U = expm(1j * M)
+            unitaries.append(U)
+
+        #get the indices of the qudits we want to measure       
+        qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
+
+      
+        # print("Psi shape before = ", self.psi.dims)
+        for i, current_q in enumerate(qudit_indices):
+            # print("Top of loop")
+            # print("Current_q = ", current_q)
+            self.psi = self.psi.evolve(unitaries[i], [current_q])
+            q = k_party(self.k_party_obj.k, self.N, None, self.psi)
+            # print("Everything OK until here")
+            # print("Psi shape after = ", self.psi.dims)
+
+            all_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
         
         entropies = []
         probabilities = []
         posteriors = []
 
-        for state in q.all_possible_posteriors:
+        for state in all_posteriors:
             if (self.party_to_measure == 0):
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
-                posteriors.append(state[0].reshape(self.N,  self.N ** 2))
+                posteriors.append(state[0].reshape(self.N ** 2, self.N))
 
             else:
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-                posteriors.append(state[0].reshape(self.N ** 2,  self.N))
+                posteriors.append(state[0].reshape(self.N , self.N ** 2))
                 
             probabilities.append(state[1])
 
