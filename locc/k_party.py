@@ -29,11 +29,9 @@ class k_party:
         self.state_desc = state_desc
         self.q_state = q_state
 
-        self.all_possible_posteriors = []
-
     #get the Hilbert space dimension of the k-party state
     def dims(self):
-        return
+        return self.dims
 
     #get hilbert space dimension of the specified party
     def get_dims_by_party(self, party_index):
@@ -51,6 +49,21 @@ class k_party:
             total_qudits += s[0]
 
         return total_qudits
+
+    '''
+    Input: party index
+    Output: An index range of the qudits the specified party holds
+    '''
+    def get_qudit_index_range(self, party_index):
+        qudits_before = 0
+        for index, s in enumerate(self.state_desc):
+            if index != party_index:
+                qudits_before += s[0]
+
+            else:
+                break
+
+        return list(range(qudits_before, qudits_before + self.state_desc[party_index][0]))
 
     #creates a copy of the current k_party state
     def copy(self):
@@ -111,15 +124,17 @@ class k_party:
     
     def measure_all_possible_posteriors_qiskit(self, qubit_to_measure):
         outcomes = []
+        all_possible_posteriors = []
 
-        while len(outcomes) < 2:
+        while len(outcomes) < self.dims:
+        
             outcome, state = self.q_state.measure([qubit_to_measure])
             if outcome not in outcomes:
                 outcomes.append(outcome)
                 prob = self.q_state.probabilities([qubit_to_measure])[int(outcome)]
-                self.all_possible_posteriors.append((state.data, prob))
+                all_possible_posteriors.append((state.data, prob))
 
-        return self.all_possible_posteriors
+        return all_possible_posteriors
 
     def entanglement_entropy(self):
         return self.E.entropy_using_singular_values(self.q_state)
