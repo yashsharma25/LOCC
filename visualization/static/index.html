@@ -3,9 +3,10 @@
 <head>
   <title>Quantum entanglement visualization</title>
 
-<script type="text/javascript" src="d3.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
 <script type="module">
+//d3.js
 //https://cdn.jsdelivr.net/npm/d3@7
 
 let width=800,height=800;
@@ -28,7 +29,7 @@ let svg = d3.select("body").append("svg")
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;");
 let nodeRadius=20;
 let linkWidth=48;
-let minPeriod=1500,addedPeriod=0;
+let linkAnimPeriod=2000,minPeriod=1000,addedPeriod=1000;
 let timestep=0,time=0,maxtimestep=100;
 
 let nodeTypes={
@@ -39,7 +40,7 @@ let nodeTypes={
     },
     update:(selection)=>{
           selection
-          .attr("r", nodeRadius)
+          .attr("r", (d)=>(d.dim?Math.log2(d.dim):1)*nodeRadius)
           .call(drag(simulation));
           ;
     },
@@ -55,15 +56,17 @@ let nodeTypes={
       g.text(function(d) {
         return d&&d.id;
       })
-      .style('stroke', '#fff')
-      .style('fill', '#000')
+      //.style('stroke', '#fff')
+      .style('fill', '#fff')
       .style('font-size', '16px')
       .attr('x', 6)
       .attr('y', 3);
     },
-    update:(selection)=>{selection.text(function(d) {
+    update:(selection)=>{
+      selection.text(function(d) {
         return d.id;
-      })
+      });
+
     },
     tick:(selection)=>{
       selection
@@ -79,7 +82,17 @@ let linkTypes={
   },
   max:{
     init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#adf")},
-    update:(selection)=>{selection.attr("stroke-width",(d)=>{(stateData.is_changing)?(d.max[timestep]*linkWidth):(d.max*linkWidth)})},
+    update:(selection)=>{
+      if(stateData){
+        if(stateData.is_changing){
+          selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)
+        }
+        else {
+          selection.attr("stroke-width",(d)=>d.max*linkWidth)
+        }
+      }
+    },
+
     tick:(selection)=>{
       if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)}
     }
@@ -89,21 +102,42 @@ let linkTypes={
     update:(selection)=>{
       selection.attr("stroke-width",(d)=>{(stateData.is_changing)?(d.min[timestep]*linkWidth):(d.min*linkWidth)});
       if(stateData&&(!stateData.is_changing)){
-        selection.each((d)=>{
-          let period=1000,offset=1000*Math.random();
-          function repeat(period,offset) {
+          //variant: synchronized animation with the same period for all
+          /*
+          function repeat() {
             selection
             .attr("stroke-width",(d)=>d.min*linkWidth)
             .transition()
-            .duration((d,i)=>i*addedPeriod+minPeriod)
+            .duration(linkAnimPeriod)
             .attr("stroke-width",(d)=>d.max*linkWidth)
             .transition()
-            .duration((d,i)=>i*addedPeriod+minPeriod)
+            .duration(linkAnimPeriod)
             .attr("stroke-width",(d)=>d.min*linkWidth)
             .on("end", repeat);
-          };
-          setTimeout(repeat(period,offset),offset);
-      });
+          }
+          repeat();
+          */
+
+          //variant: each edge has its own period and offset, which are random
+
+          selection.each(function my(d,i){
+            let that=this;//need to be a named function to have this??
+            let period=minPeriod+addedPeriod*Math.random(),offset=period*Math.random();
+            function repeat() {
+              console.log(d,i,that);
+              d3.select(that)
+              //.selectAll(".line")
+              .attr("stroke-width",(d)=>d.min*linkWidth)
+              .transition()
+              .duration(period)
+              .attr("stroke-width",(d)=>d.max*linkWidth)
+              .transition()
+              .duration(period)
+              .attr("stroke-width",(d)=>d.min*linkWidth)
+              .on("end", repeat);
+            }
+            setTimeout(repeat,offset);
+          });
 
 
       }
@@ -222,10 +256,27 @@ function initState(data){
   let n=data.dims.length;
   let parties=n;
   stateData=data;
+  //test: show possible outcomes amplitudes along with their phase
+  //meaning: for qubits, 0 is empty circle, 1 is filled circle, opacity and/or brightness or contrast is amplitude (alternatively probability/time length of the outcome is amplitude), color hue is phase (1 being red? i being yellow?), and maybe we can combine different possibilities in one oicture? liek say drawing all possibilities but at slightly different offsets from teh main nodes? in circles? in fractal patterns?
+  let possibleStates=[];
+  function getQuditValues(index,dims){
+    let result=[];
+    for(let d of dims){
+      result.unshift(index%d);
+    }
+    return result;
+  }
+  for(let [i,x] of data.state.entries()){
+    let values=getQuditValues(i,data.dims);
+    let prob=Math.sqrt(x.re*x.re+x.im*x.im);
+    if(prob==0)continue;
+    let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
+    possibleStates.push(obj);
+  }
   if(data.steps)maxtimestep=data.steps;
   timestep=0;time=0;
   let graph={nodes:[],links:[]};
-  for(let i=0;i<n;i++){graph.nodes.push( {id:i,index:i,party:i})}
+  for(let i=0;i<n;i++){graph.nodes.push( {id:i,dim:data.dims[i],index:i,party:i})}
   for(let key in data.e_stats){
     let st=key.split(",").map((x)=>parseInt(x.trim()));
     let value=data.e_stats[key];
