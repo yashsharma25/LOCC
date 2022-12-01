@@ -51,6 +51,26 @@ def custom_state_from_qiskit(vec):
     v=[x/a for x in vec]
     return qiskit.quantum_info.Statevector(v)
 
+#custom state
+def custom_state_with_dims(vec,dims):
+    s=0
+    for x in vec: s=s+abs(x)*abs(x)#complex x
+    a=np.sqrt(s)
+    v=[x/a for x in vec]
+    return qiskit.quantum_info.Statevector(v,dims)
+
+#qutrit state
+def qutrit_state_from_qiskit():
+    return custom_state_with_dims([1,1,0,0,0,0,1,1,0,0,0,0],(3,2,2))
+
+#custom state
+def custom_state_with_dims(vec,dims):
+    s=0
+    for x in vec: s=s+abs(x)*abs(x)#complex x
+    a=np.sqrt(s)
+    v=[x/a for x in vec]
+    return qiskit.quantum_info.Statevector(v,dims)
+
 graph = nx.Graph()
 graph.add_nodes_from(list(range(3)))
 graph.add_edges_from([(0,1),(0,2),(1,2)])
@@ -89,8 +109,33 @@ def test_state_data():
     result=json.dumps(o)
     return result
 
+def qutrit_test_state_data():
+    vec=[1,1,0,0,0,1,0,1,0,1,1,0]
+    dims=(3,2,2)
+    s=0
+    for x in vec: s=s+abs(x)*abs(x)#complex x
+    a=np.sqrt(s)
+    v=[x/a for x in vec]
+    state_vector=qiskit.quantum_info.Statevector(v,dims)
+    state_obj=[{"re":x.real,"im":x.imag} for x in state_vector]
+    #state_obj=[{"re":x,"im":0} for x in v]
+    #dims=state_vector.dims()
+    e_stats={}
+    o={"state":state_obj,"name":"qutrits","parties":len(dims),"dims":dims,
+   "e_stats":e_stats}
+    #em = EntanglementMeasures(2, tri_party, 2)
+    for i in range(len(dims)):
+        for j in range(i):
+            if i==j: 
+                continue
+            #max_e=em.get_le_upper_bound(tri_party, i, j)
+            #min_e=em.get_le_lower_bound(tri_party, i, j)
+            max_e=2.0/3
+            min_e=1.0/3
+            e_stats[str(i)+","+str(j)]={"max":max_e,"min":min_e}
+    result=json.dumps(o)
+    return result
 
-state_name="test"
 
 def prepare_state_data(state_vector,name):
     tri_party=k_party(3,2,[(1,[2]),(1,[2]),(1,[2])],state_vector)
@@ -114,7 +159,7 @@ def prepare_state_data_evolving(statev1,statev2,name):
     #get_le_upper_bound_evolving(self, arr, partyA, partyB)
     #interpolate vectors: 
     party_arr=[]
-    steps=20
+    steps=5
     tri_party=k_party(3,2,[(1,[2]),(1,[2]),(1,[2])],statev1)
     for i in range(steps):
         state_vector=custom_state_from_qiskit((i*statev1+(steps-i)*statev2)/steps)
@@ -168,10 +213,15 @@ states={
         "ghz":prepare_state_data(ghz_state_from_qiskit(),"ghz"),
         "w":prepare_state_data(w_state_from_qiskit(),"w"),
         "epr":prepare_state_data(epr_state_from_qiskit(),"epr"),
-        "000":prepare_state_data(custom_state_from_qiskit([1,0,0,0,0,0,0,0]),"000"),
-        "graph":prepare_state_data(graph_state_from_qiskit(graph),"graph"),
-        "test":test_state_data(),
-        "changing":prepare_state_data_evolving(ghz_state_from_qiskit(),w_state_from_qiskit(),"changing")
+        #"000":prepare_state_data(custom_state_from_qiskit([1,0,0,0,0,0,0,0]),"000"),
+        #"graph":prepare_state_data(graph_state_from_qiskit(graph),"graph"),
+        #"test":test_state_data(),
+        "changing":prepare_state_data_evolving(ghz_state_from_qiskit(),w_state_from_qiskit(),"changing"),
+    
+        #"qutrits":prepare_state_data(qutrit_state_from_qiskit(),"qutrits"), 
+        #the above gives an error now
+        "qutrits":qutrit_test_state_data(),
+    
     }
 user_state=states["changing"]
 
@@ -196,6 +246,7 @@ def index_state(name):
     if name in states: 
         state_name = name
         user_state=states[state_name]
+        print(name, state_name)
     else:
         strs=name.split(",") #eg. each number is like 1+2j
         array=[complex(x) for x in strs]
@@ -203,7 +254,7 @@ def index_state(name):
         state_name=name
         states[name]=user_state
     #if state_name not in states: state_name="ghz"
-    print(name, state_name,array)
+        print(name, state_name,array)
     return app.send_static_file('index.html')
 
 @app.route("/state.json")
