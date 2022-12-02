@@ -270,18 +270,13 @@ class EntanglementMeasures:
             U = expm(1j * M)
             unitaries.append(U)
 
-        #get the indices of the qudits we want to measure       
+        #get the indices of the qudits we want to measure
         qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
 
-      
-        # print("Psi shape before = ", self.psi.dims)
         for i, current_q in enumerate(qudit_indices):
-            # print("Top of loop")
-            # print("Current_q = ", current_q)
+   
             self.psi = self.psi.evolve(unitaries[i], [current_q])
             q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-            # print("Everything OK until here")
-            # print("Psi shape after = ", self.psi.dims)
 
             all_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
         
