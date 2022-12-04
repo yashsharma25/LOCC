@@ -8,7 +8,10 @@ from scipy.linalg import expm
 from k_party import k_party
 
 from qiskit.quantum_info.operators import Operator
+from qiskit.quantum_info import Statevector
+
 import copy
+from scipy.linalg import dft
 
 
 class EntanglementMeasures:
@@ -198,28 +201,23 @@ class EntanglementMeasures:
         self.psi = self.psi.evolve(U_operator, [self.party_to_measure])
 
         q = k_party(self.k_party_obj.k, self.k_party_obj.dims, self.k_party_obj.state_desc, self.psi)
-        #print("MEASURE")
         all_possible_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
         
         entropies = []
         probabilities = []
         posteriors = []
 
-        #print("COMPUTE ENTROPY")
-
         for state in all_possible_posteriors:
             if (self.party_to_measure == 2):
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
-                posteriors.append(state[0].reshape(self.N,  self.N ** 2))
+                posteriors.append(state[0].reshape(self.N ** 2, self.N))
 
             else:
                 entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-                posteriors.append(state[0].reshape(self.N ** 2,  self.N))
+                posteriors.append(state[0].reshape(self.N , self.N ** 2))
                 
          
             probabilities.append(state[1])
-            # print("Entropies = ", entropies)
-            # print("Probabilities = ", probabilities)
 
         #compute weighted average
         avg_entropy = np.dot(probabilities, entropies)
@@ -233,7 +231,10 @@ class EntanglementMeasures:
 
     def get_le_multiple(self, k_party_obj, partyA, partyB):
         self.k_party_obj = k_party_obj
-        v = np.random.uniform(0, 2*np.pi, 8)
+
+        #how many parameters are needed?
+        #lets just measure with the same unitary for now
+        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
 
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
                 self.party_to_measure = 2
@@ -244,57 +245,287 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        avg_entropy = self.maximise_le_multiqubits(v) 
+        self.party_to_measure = 3
+        avg_entropy = self.maximise_le_multiparty(v) 
 
-    def maximise_le_multiqubits(self, v):
+    def maximise_le_multiparty(self, v):
         self.psi = self.k_party_obj.q_state
 
-        qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
+        # qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
 
-        opt_parameters_list = np.array_split(v, qudits_to_measure)
+        # opt_parameters_list = np.array_split(v, qudits_to_measure)
 
-        unitaries = []
-        for o in opt_parameters_list:
-            #generate unitary matrix
-            M = np.zeros((self.N, self.N), dtype = complex)
-            for i in range(0,  self.N):
-                M[i][i] = o[i]
+        # unitaries = []
+        # for o in opt_parameters_list:
+        #     #generate unitary matrix
+        #     M = np.zeros((self.N, self.N), dtype = complex)
+        #     for i in range(0,  self.N):
+        #         M[i][i] = o[i]
             
-            vector_index = self.N
-            for row in range(0,  self.N - 1):
-                for column in range(row + 1,  self.N):
-                    M[row][column] = o[vector_index] + 1j * o[vector_index+1]
-                    M[column][row] = o[vector_index] - 1j * o[vector_index+1]
-                    vector_index += 2
+        #     vector_index = self.N
+        #     for row in range(0,  self.N - 1):
+        #         for column in range(row + 1,  self.N):
+        #             M[row][column] = o[vector_index] + 1j * o[vector_index+1]
+        #             M[column][row] = o[vector_index] - 1j * o[vector_index+1]
+        #             vector_index += 2
 
-            U = expm(1j * M)
-            unitaries.append(U)
+        #     U = expm(1j * M)
+        #     unitaries.append(U)
+
+
+        #generate unitary matrix
+        M = np.zeros((self.N, self.N), dtype = complex)
+        for i in range(0,  self.N):
+            M[i][i] = v[i]
+        
+        vector_index = self.N
+        for row in range(0,  self.N - 1):
+            for column in range(row + 1,  self.N):
+                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
+                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
+                vector_index += 2
+
+        U = expm(1j * M)
+        U = np.sqrt(1/2) * dft(2)
+
+        U_operator = Operator(U)
 
         #get the indices of the qudits we want to measure
         qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
 
-        for i, current_q in enumerate(qudit_indices):
-   
-            self.psi = self.psi.evolve(unitaries[i], [current_q])
+        all_posteriors = []
+        all_posteriors.append((self.psi, 0))
+        self.party_to_measure = self.k_party_obj.k - 1
+        parties_measured = 0
+        
+        measurements_to_make_for_this_party = 1
+
+        states_queue = []
+        states_queue.append((self.psi, 0))
+
+        while states_queue:
+            print("Queue length = ", len(states_queue))
+
+            if not isinstance(states_queue[0][0], Statevector):
+                self.psi = Statevector(states_queue.pop(0)[0])
+
+            else:
+                self.psi = states_queue.pop(0)[0]
+                
+            print("Queue length after pop = ", len(states_queue))
+
+            print("Psi = ", self.psi)
+            print("Self.party to measure = ", self.party_to_measure)
+            self.psi = self.psi.evolve(U_operator, [self.party_to_measure])
             q = k_party(self.k_party_obj.k, self.N, None, self.psi)
 
             all_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
-        
+
+            for a in all_posteriors:
+                states_queue.append(a)
+
+            print("Queue length after APPEND = ", len(states_queue))
+
+            #how to know that all measurements for this party has been done
+            #there is an equation for that
+
+            measurements_to_make_for_this_party -= 1
+            if measurements_to_make_for_this_party == 0:
+                print("Finished measurements for party_num = ", self.party_to_measure)
+                parties_measured += 1
+                self.party_to_measure -= 1
+
+                if self.party_to_measure == 1:
+                    measurements_to_make_for_this_party = 0
+                    break
+
+                else:
+                    measurements_to_make_for_this_party = self.k_party_obj.dims ** (parties_measured)
+                    print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
+                    
+        print("QUEUE NOW =", len(states_queue))
+
         entropies = []
         probabilities = []
         posteriors = []
 
-        for state in all_posteriors:
-            if (self.party_to_measure == 0):
-                entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
-                posteriors.append(state[0].reshape(self.N ** 2, self.N))
+        print("Everything ok ")
+    
+        for state in states_queue:
+            # if (self.party_to_measure == (self.k_party_obj.k - 1)):
+            #     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
+            #     posteriors.append(state[0].reshape(self.N ** 2, self.N))
 
-            else:
-                entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-                posteriors.append(state[0].reshape(self.N , self.N ** 2))
+            # else:
+            #     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
+            #     posteriors.append(state[0].reshape(self.N , self.N ** 2))
                 
+            #if (self.party_to_measure == (self.k_party_obj.k - 1)):
+            #reshape 8,2 for 4-partite. But why?
+            #Between which two parties are we computing the entanglement entropy
+            #reshaping is 16,2 for 5-partite. But why?
+            #I have to really understand the reshaping
+            entropies.append(q.entanglement_entropy_for_state(state[0].reshape(16, 2)))
+            posteriors.append(state[0].reshape(16, 2))
+
+            # else:
+            #     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
+            #     posteriors.append(state[0].reshape(self.N , self.N ** 2))
             probabilities.append(state[1])
 
         #compute weighted average
+        print("Probabilites = ", probabilities)
+        print("Entropies = ", entropies)
         avg_entropy = np.dot(probabilities, entropies)
+        print("Avg entropy = ", avg_entropy)
         return -1 * avg_entropy
+
+
+'''
+We first measure the fifth party
+Measuring that gives us a state
+Then we measure the fourth party
+But remember measurements have multiple possible outcomes
+
+So when we measure the fifth party, we get get multiple outcomes and multiple states corresponding to those outcomes
+We have to store all those states
+And then measure the fourth party for all those outcomes
+
+So how many states do we have to measure
+1 + (num of parties - 3) * qudit_dimension
+
+In case of qubits
+For 3: 1 
+For 4: 1 + 1*2. How? Once we have measured the fifth party. we have two states. we have to measure both these states
+For 5: 1 + 2*2
+
+Total measurement outcomes = (1 + (num of parties - 3) * qudit_dimension) * qudit_dimension
+
+So how should we setup the loop?
+Loop over parties?
+Otherwise just loop until number_of_parties_parties == (k - 2)
+Okay
+
+Yes this is the stop point
+
+Once we are inside the loop, what do we do?
+Call the measure function on the state
+What will it give in return?
+It will give us outcomes, states
+
+Now we this our new state
+Do the outcomes matter?
+So for each state, we store the state itself and its outcome probability
+Then in the end we are left 
+Yes they should. They are the probability. You cannot ignore those
+
+
+In the end when we compute entanglement entropy , when we are left with the final bipartite state
+
+The outcomes do matter. Because the posterior state depends on that outcome
+So when we have the posterior state, it will 
+
+In the end, we will have many bipartite states
+
+And the probability outcome their would matter
+
+Is this how localizable entanglement is defined?
+Yes
+
+But here is the question?
+How many bipartite states do we end up with?
+Lets start with 4 partite state
+We measure this state and get 2 tripartite states
+Yes each state corresponding to an outcome
+Now we measure the 2 tripartite states
+How many bipartite states do we get?
+For each tripartite state, we get 2 bipartite states
+
+So finally for a 4-partite state we get in the end, 2 ^ 2 = 4. bipartite state
+
+(qudit_dimension)^ k - 2 bipartite states
+For 5 partite state, we should then get 2 * 3 = 6 bipartite states
+How many do we get?
+
+2^(3) = 8
+We start with a 5 partite state
+And get 2, 4-partite states
+
+So we should have actually had 8 bipartite states in the end
+
+Yes, that is the right equation
+Ok so for a 4-partite state, we get 4 bipartite states
+What do we do with them?
+
+We measure the entanglement entropies for each of those 4 bipartite states
+Are those 4 bipartite states equally likely
+Absolutely not
+
+So for all those 4 bipartite states, we need the probabilities of those states occuring
+
+We are performing local measurements
+
+For an optimiser, can we give all these variables at once?
+The other way would be to optimise for 1 party and then random unitaries for the others
+But then it is a question of how many random unitaries
+
+For now, we can have all the parameters in the function. And then we optimize for that.
+Yes
+
+But wait, the unitaries for each measurement
+What to do about that?
+
+Do we evolve with the same unitary for all the measurements?
+No. But we have that many parameters ready
+
+OK
+How many parameters will be needed for 4-partite state of qubits?
+
+
+2^(2) bipartite states in the end
+Its not about that. Its about how many single qubit local measurements we have to make
+Yes
+
+1 + (num of parties - 3) * qudit_dimension measurements
+
+For each measurement we need measurements^2 parameters
+So for 4-partite qubit state, we need
+
+1 + (num of parties - 3) * qudit_dimension
+= 1 + (4-3) * 2
+= 1 + 2
+= 3
+
+3^4 = 27 parameters
+
+For a 5-partite state we would need 5 ^4 = 625 parameters
+We could try, and then think about the way of doing it one by one.
+Yes
+
+How is it done one by one
+Optimise for one measurement and then apply random unitaries 
+In the end now we have one unitary fixed. 
+Then optimise for another unitary with the fixed one fixed and random unitaries on the remaining one
+But now the problem is this, applying the same random unitary to the other parties, or a different one in each run
+Probably a different run in each one
+
+There is no guarantee that the basis which yielded optimal for this random unitary
+The random unitary has to be the same across the optimisation
+If its different, then there is no comparison basis for the optimal basis
+Yes, so we try this after the all parameters are once
+
+This looks like a greedy algorithm
+
+Can we solve it using divide and conquer?
+How is divide and conquer even applicable here?
+If these are local measurements, why cant we do them separately?
+
+If we do one by one, how is that even going to work.
+
+
+After this we should definitely find the optimal way of measuring LE from the paper
+
+
+So we pass all the parameters.
+That problem is solved
+'''
