@@ -89,7 +89,7 @@ class EntanglementMeasures:
             self.party_to_measure = 1
 
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
-            self.party_to_measure = 0arr[0].dims ** 2
+            self.party_to_measure = arr[0].dims ** 2
 
         v = np.random.uniform(0, 2*np.pi, )
         self.starting_parameters = v
@@ -299,18 +299,22 @@ class EntanglementMeasures:
         measurements_to_make_for_this_party = 1
 
         states_queue = []
-        states_queue.append((self.psi, 0, 1))
+        
+        states_queue.append((self.psi, 1))
 
         while states_queue:
             print("Queue length = ", len(states_queue))
 
             if not isinstance(states_queue[0][0], Statevector):
-                previous_state = Statevector(states_queue.pop(0))
-
-                self.psi = Statevector(states_queue.pop(0)[0])
+                previous_state_tuple = Statevector(states_queue.pop(0))
+                self.psi = Statevector(previous_state_tuple[0])
+                prev_prob = previous_state_tuple[1]
 
             else:
+                previous_state_tuple = states_queue.pop(0)
                 self.psi = states_queue.pop(0)[0]
+                prev_prob = previous_state_tuple[1]
+
                 
             print("Queue length after pop = ", len(states_queue))
 
@@ -323,7 +327,7 @@ class EntanglementMeasures:
 
             for a in all_posteriors:
                 print("Probability = ", a[1])
-                x = (a[0], a[1] , )
+                x = (a[0], a[1] * prev_prob)
                 states_queue.append(x)
 
             print("Queue length after APPEND = ", len(states_queue))
