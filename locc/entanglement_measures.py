@@ -91,7 +91,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        v = np.random.uniform(0, 2*np.pi, arr[0].dims ** 2)
         self.starting_parameters = v
 
         for k_party_obj in arr:
@@ -128,7 +128,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        v = np.random.uniform(0, 2*np.pi, arr[0].dims ** 2)
         self.starting_parameters = v
 
         for k_party_obj in arr:
@@ -245,7 +245,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        self.party_to_measure = 3
+        self.party_to_measure = self.k_party_obj.k
         avg_entropy = self.maximise_le_multiparty(v) 
 
     def maximise_le_multiparty(self, v):
@@ -293,20 +293,20 @@ class EntanglementMeasures:
         #get the indices of the qudits we want to measure
         qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
 
-        all_posteriors = []
-        all_posteriors.append((self.psi, 0))
         self.party_to_measure = self.k_party_obj.k - 1
         parties_measured = 0
         
         measurements_to_make_for_this_party = 1
 
         states_queue = []
-        states_queue.append((self.psi, 0))
+        states_queue.append((self.psi, 0, 1))
 
         while states_queue:
             print("Queue length = ", len(states_queue))
 
             if not isinstance(states_queue[0][0], Statevector):
+                previous_state = Statevector(states_queue.pop(0))
+
                 self.psi = Statevector(states_queue.pop(0)[0])
 
             else:
@@ -322,7 +322,9 @@ class EntanglementMeasures:
             all_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
 
             for a in all_posteriors:
-                states_queue.append(a)
+                print("Probability = ", a[1])
+                x = (a[0], a[1] , )
+                states_queue.append(x)
 
             print("Queue length after APPEND = ", len(states_queue))
 
@@ -380,6 +382,7 @@ class EntanglementMeasures:
         print("Avg entropy = ", avg_entropy)
         return -1 * avg_entropy
 
+#Now we need to make sure about the probabilities
 
 '''
 We first measure the fifth party
@@ -497,6 +500,10 @@ So for 4-partite qubit state, we need
 = 3
 
 3^4 = 27 parameters
+
+Triparite 9 parameters
+Four partite 4^2 = 16
+5 partite = 5^2 parameters
 
 For a 5-partite state we would need 5 ^4 = 625 parameters
 We could try, and then think about the way of doing it one by one.
