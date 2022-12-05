@@ -91,7 +91,7 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = arr[0].dims ** 2
 
-        v = np.random.uniform(0, 2*np.pi, )
+        v = np.random.uniform(0, 2*np.pi, arr[0].dims ** 2)
         self.starting_parameters = v
 
         for k_party_obj in arr:
