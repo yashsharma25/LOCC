@@ -291,7 +291,7 @@ class EntanglementMeasures:
         U_operator = Operator(U)
 
         #get the indices of the qudits we want to measure
-        qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
+        #qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
 
         self.party_to_measure = self.k_party_obj.k - 1
         parties_measured = 0
@@ -303,41 +303,31 @@ class EntanglementMeasures:
         states_queue.append((self.psi, 1))
 
         while states_queue:
-            print("Queue length = ", len(states_queue))
-
             if not isinstance(states_queue[0][0], Statevector):
-                previous_state_tuple = Statevector(states_queue.pop(0))
+                previous_state_tuple =states_queue.pop(0)
                 self.psi = Statevector(previous_state_tuple[0])
                 prev_prob = previous_state_tuple[1]
 
             else:
                 previous_state_tuple = states_queue.pop(0)
-                self.psi = states_queue.pop(0)[0]
+                self.psi = previous_state_tuple[0]
                 prev_prob = previous_state_tuple[1]
 
-                
-            print("Queue length after pop = ", len(states_queue))
-
-            print("Psi = ", self.psi)
-            print("Self.party to measure = ", self.party_to_measure)
             self.psi = self.psi.evolve(U_operator, [self.party_to_measure])
             q = k_party(self.k_party_obj.k, self.N, None, self.psi)
 
             all_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
 
             for a in all_posteriors:
-                print("Probability = ", a[1])
                 x = (a[0], a[1] * prev_prob)
                 states_queue.append(x)
-
-            print("Queue length after APPEND = ", len(states_queue))
 
             #how to know that all measurements for this party has been done
             #there is an equation for that
 
             measurements_to_make_for_this_party -= 1
             if measurements_to_make_for_this_party == 0:
-                print("Finished measurements for party_num = ", self.party_to_measure)
+                #print("Finished measurements for party_num = ", self.party_to_measure)
                 parties_measured += 1
                 self.party_to_measure -= 1
 
@@ -347,41 +337,21 @@ class EntanglementMeasures:
 
                 else:
                     measurements_to_make_for_this_party = self.k_party_obj.dims ** (parties_measured)
-                    print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
+                    #print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
                     
-        print("QUEUE NOW =", len(states_queue))
-
         entropies = []
         probabilities = []
         posteriors = []
-
-        print("Everything ok ")
     
         for state in states_queue:
-            # if (self.party_to_measure == (self.k_party_obj.k - 1)):
-            #     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N ** 2, self.N)))
-            #     posteriors.append(state[0].reshape(self.N ** 2, self.N))
-
-            # else:
-            #     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-            #     posteriors.append(state[0].reshape(self.N , self.N ** 2))
-                
-            #if (self.party_to_measure == (self.k_party_obj.k - 1)):
-            #reshape 8,2 for 4-partite. But why?
-            #Between which two parties are we computing the entanglement entropy
-            #reshaping is 16,2 for 5-partite. But why?
-            #I have to really understand the reshaping
-            entropies.append(q.entanglement_entropy_for_state(state[0].reshape(16, 2)))
-            posteriors.append(state[0].reshape(16, 2))
-
-            # else:
-            #     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.N , self.N ** 2)))
-            #     posteriors.append(state[0].reshape(self.N , self.N ** 2))
+            dim1 = int(self.k_party_obj.dims ** (self.k_party_obj.k-1))
+            entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+            posteriors.append(state[0].reshape(dim1, self.k_party_obj.dims))
             probabilities.append(state[1])
 
         #compute weighted average
-        print("Probabilites = ", probabilities)
-        print("Entropies = ", entropies)
+        # print("Probabilites = ", probabilities)
+        # print("Entropies = ", entropies)
         avg_entropy = np.dot(probabilities, entropies)
         print("Avg entropy = ", avg_entropy)
         return -1 * avg_entropy
