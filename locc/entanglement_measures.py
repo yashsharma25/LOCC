@@ -10,9 +10,22 @@ from k_party import k_party
 from qiskit.quantum_info.operators import Operator
 from qiskit.quantum_info import Statevector
 
-import copy
-from scipy.linalg import dft
+import time
 
+class MinimizeStopper(object):
+    def __init__(self, max_sec=10):
+        self.max_sec = max_sec
+        self.start   = time.time()
+
+    def __call__(self, xk):
+        # callback to terminate if max_sec exceeded
+        elapsed = time.time() - self.start
+        if elapsed > self.max_sec:
+            print("Terminating optimization: time limit reached")
+            return True
+        else:
+            # you might want to report other stuff here
+            print("Elapsed: %.3f sec" % elapsed)
 
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
@@ -21,6 +34,8 @@ class EntanglementMeasures:
         self.psi = psi
         self.party_to_measure = party_to_measure
         self.starting_parameters = []
+        self.partyA = 0
+        self.partyB = 0
 
     def entanglement_entropy(self, quantum_state):
         return
@@ -35,6 +50,8 @@ class EntanglementMeasures:
     def get_le_lower_bound(self, k_party_obj, partyA, partyB):
         self.k_party_obj = k_party_obj
         self.psi = self.k_party_obj.q_state
+        self.partyA = partyA
+        self.partyB = partyB
 
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
             self.party_to_measure = 2
@@ -46,6 +63,7 @@ class EntanglementMeasures:
             self.party_to_measure = 0
 
         v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        minimize_stopper = MinimizeStopper()
 
         if self.k_party_obj.k > 3:
             res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
@@ -54,6 +72,7 @@ class EntanglementMeasures:
             return res.fun
 
         else:
+
             res = optimize.minimize(self.minimise_le, v, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
             print("Entanglement entropy = ", res.fun)
@@ -62,6 +81,8 @@ class EntanglementMeasures:
     #upper bound for localisable entanglement
     def get_le_upper_bound(self, k_party_obj, partyA, partyB):
         self.k_party_obj = k_party_obj
+        self.partyA = partyA
+        self.partyB = partyB
 
         self.psi = self.k_party_obj.q_state
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
@@ -97,6 +118,8 @@ class EntanglementMeasures:
     '''
     def get_le_upper_bound_evolving(self, arr, partyA, partyB):
         min_le_array = []
+        self.partyA = partyA
+        self.partyB = partyB
 
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
                 self.party_to_measure = 2
@@ -118,7 +141,7 @@ class EntanglementMeasures:
             if self.k_party_obj.k > 3:
                 res = optimize.minimize(self.maximise_le_multiparty, v, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
-                print("Entanglement entropy = ", -1 * res.fun)
+                print("Multiparty Entanglement entropy = ", -1 * res.fun)
                 min_le_array.append(res.fun)
 
 
@@ -141,6 +164,8 @@ class EntanglementMeasures:
     '''    
     def get_le_lower_bound_evolving(self, arr, partyA, partyB):
         max_le_array = []
+        self.partyA = partyA
+        self.partyB = partyB
 
         if ((partyA == 0 and partyB == 1) or (partyA == 1 and partyB == 0)):
                 self.party_to_measure = 2
@@ -158,18 +183,19 @@ class EntanglementMeasures:
             self.k_party_obj = k_party_obj
 
             self.psi = self.k_party_obj.q_state
-            
+            minimize_stopper = MinimizeStopper()
+
             if self.k_party_obj.k > 3:
                 res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
-                print("Entanglement entropy = ", -1 * res.fun)
+                print("Entanglement entropy = ", res.fun)
                 max_le_array.append(res.fun)
 
 
             else:
                 res = optimize.minimize(self.minimise_le, v, method='nelder-mead',
                                 options={'xatol': 1e-8, 'disp': True})
-                print("Entanglement entropy = ", -1 * res.fun)
+                print("Entanglement entropy = ",  res.fun)
                 max_le_array.append(res.fun)
         
         return max_le_array
@@ -303,7 +329,15 @@ class EntanglementMeasures:
         #get the indices of the qudits we want to measure
         #qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
 
-        self.party_to_measure = self.k_party_obj.k - 1
+
+        #which parties to measure in what order
+        parties_to_measure = []
+        for party_index in range(self.k_party_obj.k, 0, -1):
+            if party_index != self.partyA and  party_index != self.partyB:
+                self.party_to_measure = party_index - 1
+                parties_to_measure.append(party_index - 1)
+            
+        #print("Parties to measure = ", parties_to_measure)
         parties_measured = 0
         
         measurements_to_make_for_this_party = 1
@@ -335,8 +369,10 @@ class EntanglementMeasures:
             measurements_to_make_for_this_party -= 1
             if measurements_to_make_for_this_party == 0:
                 #print("Finished measurements for party_num = ", self.party_to_measure)
+                parties_to_measure.pop(0)
                 parties_measured += 1
-                self.party_to_measure -= 1
+
+                self.party_to_measure = parties_to_measure[0] - 1
 
                 if self.party_to_measure == 1:
                     measurements_to_make_for_this_party = 0
@@ -365,6 +401,28 @@ class EntanglementMeasures:
     def minimise_le_multiparty(self, v):
         self.psi = self.k_party_obj.q_state
 
+        # qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
+
+        # opt_parameters_list = np.array_split(v, qudits_to_measure)
+
+        # unitaries = []
+        # for o in opt_parameters_list:
+        #     #generate unitary matrix
+        #     M = np.zeros((self.N, self.N), dtype = complex)
+        #     for i in range(0,  self.N):
+        #         M[i][i] = o[i]
+            
+        #     vector_index = self.N
+        #     for row in range(0,  self.N - 1):
+        #         for column in range(row + 1,  self.N):
+        #             M[row][column] = o[vector_index] + 1j * o[vector_index+1]
+        #             M[column][row] = o[vector_index] - 1j * o[vector_index+1]
+        #             vector_index += 2
+
+        #     U = expm(1j * M)
+        #     unitaries.append(U)
+
+
         #generate unitary matrix
         M = np.zeros((self.N, self.N), dtype = complex)
         for i in range(0,  self.N):
@@ -384,7 +442,15 @@ class EntanglementMeasures:
         #get the indices of the qudits we want to measure
         #qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
 
-        self.party_to_measure = self.k_party_obj.k - 1
+
+        #which parties to measure in what order
+        parties_to_measure = []
+        for party_index in range(self.k_party_obj.k, 0, -1):
+            if party_index != self.partyA and  party_index != self.partyB:
+                self.party_to_measure = party_index - 1
+                parties_to_measure.append(party_index - 1)
+            
+        #print("Parties to measure = ", parties_to_measure)
         parties_measured = 0
         
         measurements_to_make_for_this_party = 1
@@ -416,8 +482,10 @@ class EntanglementMeasures:
             measurements_to_make_for_this_party -= 1
             if measurements_to_make_for_this_party == 0:
                 #print("Finished measurements for party_num = ", self.party_to_measure)
+                parties_to_measure.pop(0)
                 parties_measured += 1
-                self.party_to_measure -= 1
+
+                self.party_to_measure = parties_to_measure[0] - 1
 
                 if self.party_to_measure == 1:
                     measurements_to_make_for_this_party = 0
@@ -441,5 +509,4 @@ class EntanglementMeasures:
         # print("Probabilites = ", probabilities)
         # print("Entropies = ", entropies)
         avg_entropy = np.dot(probabilities, entropies)
-        print("Avg entropy = ", avg_entropy)        
         return avg_entropy
