@@ -114,12 +114,19 @@ class EntanglementMeasures:
             self.k_party_obj = k_party_obj
 
             self.psi = self.k_party_obj.q_state
-            
-            #start the optimisation using the final optimised parameters of the last state
-            res = optimize.minimize(self.maximise_le, self.starting_parameters, method='nelder-mead',
+
+            if self.k_party_obj.k > 3:
+                res = optimize.minimize(self.maximise_le_multiparty, v, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
-            print("Entanglement entropy = ", -1 * res.fun)
-            min_le_array.append(res.fun)
+                print("Entanglement entropy = ", -1 * res.fun)
+                min_le_array.append(res.fun)
+
+
+            else:
+                res = optimize.minimize(self.maximise_le, v, method='nelder-mead',
+                                options={'xatol': 1e-8, 'disp': True})
+                print("Entanglement entropy = ", -1 * res.fun)
+                min_le_array.append(res.fun)
         
         return min_le_array
 
@@ -152,11 +159,18 @@ class EntanglementMeasures:
 
             self.psi = self.k_party_obj.q_state
             
-            #start the optimisation using the final optimised parameters of the last state
-            res = optimize.minimize(self.minimise_le, self.starting_parameters, method='nelder-mead',
+            if self.k_party_obj.k > 3:
+                res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
                             options={'xatol': 1e-8, 'disp': True})
-            print("Entanglement entropy = ", -1 * res.fun)
-            max_le_array.append(-1 * res.fun)
+                print("Entanglement entropy = ", -1 * res.fun)
+                max_le_array.append(res.fun)
+
+
+            else:
+                res = optimize.minimize(self.minimise_le, v, method='nelder-mead',
+                                options={'xatol': 1e-8, 'disp': True})
+                print("Entanglement entropy = ", -1 * res.fun)
+                max_le_array.append(res.fun)
         
         return max_le_array
 
