@@ -3,14 +3,14 @@
 <head>
   <title>Quantum entanglement visualization</title>
 
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script type="text/javascript" src="d3.js"></script>
 
 <script type="module">
 //d3.js
 //https://cdn.jsdelivr.net/npm/d3@7
 
 let width=800,height=800;
-let stateData;
+let stateData;let possibleStates=[];
 
 let forceNode = d3.forceManyBody().strength(-400);
 let forceLink = d3.forceLink([]).id((x) => x.id).distance(500);
@@ -27,6 +27,11 @@ let svg = d3.select("body").append("svg")
         .attr("height", height)
         .attr("viewBox", [-width / 2, -height / 2, width, height])
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;");
+
+let titleBar = d3.select("body").append("div").style("position","absolute").style("top","0").style("width","100%")
+.style("text-align","center");
+let titleText=titleBar.append("p");console.log(titleText);
+
 let nodeRadius=20;
 let linkWidth=48;
 let linkAnimPeriod=2000,minPeriod=1000,addedPeriod=1000;
@@ -36,7 +41,10 @@ let nodeTypes={
   node:{
     type:"circle",
     init:(g)=>{
-      g.attr("stroke-width", 3);
+      g.attr("stroke-width", 3)
+      .style('stroke', '#def')
+      .style('fill', 'none')
+      ;
     },
     update:(selection)=>{
           selection
@@ -48,6 +56,35 @@ let nodeTypes={
       selection
         .attr("cx", d => d.x)
         .attr("cy", d => d.y);
+    }
+  },
+  outcome:{
+    type:"circle",
+    init:(g)=>{
+      g.attr("stroke-width", 2);
+    },
+    update:(selection)=>{
+          selection
+          .attr("r", (d)=>{
+            let result=possibleStates[0].values[d.id];
+            if(result==0) return nodeRadius/2-2;
+            else return Math.log2(result)*nodeRadius })
+          //.call(drag(simulation));
+          ;
+          //let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
+
+    },
+    tick:(selection)=>{
+      selection
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", (d)=>{
+          let stateid=Math.min(Math.floor(Math.abs(timestep-1)/100),possibleStates.length);
+          let result=possibleStates[stateid].values[d.id];
+          if(result==0) return nodeRadius/2-2;
+          else return (Math.log2(result)+1)*nodeRadius })
+        //.call(drag(simulation));
+        ;
     }
   },
   label:{
@@ -232,6 +269,7 @@ function drag(simulation) {
 
 function setData(data){
   console.log(data);
+  setTimeout(()=>{titleText.text(data.name);},10);
 
   simulation.nodes(data.nodes);
   forceLink.links(data.links);
@@ -257,8 +295,8 @@ function initState(data){
   let parties=n;
   stateData=data;
   //test: show possible outcomes amplitudes along with their phase
-  //meaning: for qubits, 0 is empty circle, 1 is filled circle, opacity and/or brightness or contrast is amplitude (alternatively probability/time length of the outcome is amplitude), color hue is phase (1 being red? i being yellow?), and maybe we can combine different possibilities in one oicture? liek say drawing all possibilities but at slightly different offsets from teh main nodes? in circles? in fractal patterns?
-  let possibleStates=[];
+  //meaning: for qubits, 0 is a dark circle or a dot at the center, 1 is a bright circle (or has an empty center to represent higher energy), for larger dimensions there can be more concentric circles and a larger outline for teh node. opacity and/or brightness or contrast is amplitude (alternatively probability/time length of the outcome is amplitude), color hue is phase (1 being red? i being yellow?), and maybe we can combine different possibilities in one oicture? liek say drawing all possibilities but at slightly different offsets from teh main nodes? in circles? in fractal patterns?
+  possibleStates=[];
   function getQuditValues(index,dims){
     let result=[];
     for(let d of dims){
@@ -273,7 +311,8 @@ function initState(data){
     let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
     possibleStates.push(obj);
   }
-  if(data.steps)maxtimestep=data.steps;
+  if(data.steps){maxtimestep=data.steps;}
+  else{maxtimestep=possibleStates*100;}
   timestep=0;time=0;
   let graph={nodes:[],links:[]};
   for(let i=0;i<n;i++){graph.nodes.push( {id:i,dim:data.dims[i],index:i,party:i})}
