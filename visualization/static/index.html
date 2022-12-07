@@ -79,7 +79,7 @@ let nodeTypes={
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", (d)=>{
-          let stateid=Math.min(Math.floor(Math.abs(timestep-1)/100),possibleStates.length);
+          let stateid=Math.min(Math.floor(Math.abs(timestep-1)/100),possibleStates.length-1);
           let result=possibleStates[stateid].values[d.id];
           if(result==0) return nodeRadius/2-2;
           else return (Math.log2(result)+1)*nodeRadius })
@@ -269,7 +269,7 @@ function drag(simulation) {
 
 function setData(data){
   console.log(data);
-  setTimeout(()=>{titleText.text(data.name);},10);
+
 
   simulation.nodes(data.nodes);
   forceLink.links(data.links);
@@ -290,6 +290,7 @@ function setData(data){
 
 function initState(data){
   console.log(data)
+
   //dims:qudit dims,parties:parties(currently one qudit per party),state:state vector
   let n=data.dims.length;
   let parties=n;
@@ -311,6 +312,26 @@ function initState(data){
     let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
     possibleStates.push(obj);
   }
+  function complex2str(x){
+    let re=x.re.toString().substring(0,5),im=x.im.toString().substring(0,5);
+    if(x.re!=0)
+    {
+      if(x.im!=0){return ""+re+"+"+im+"i";}
+      else {return ""+re;}
+    }
+    else{
+      if(x.im!=0){return im+"i";}
+      else {return "0";}
+    }
+  }
+  setTimeout(()=>{
+    let text=data.name+" ";
+    for(let [i,state] of possibleStates.entries()){
+      text+=((i>0)?"+":"")+complex2str(state.amplitude)+"|"+state.values.join("")+"> ";
+    }
+    titleText.text(text);
+  },10);
+
   if(data.steps){maxtimestep=data.steps;}
   else{maxtimestep=possibleStates*100;}
   timestep=0;time=0;
