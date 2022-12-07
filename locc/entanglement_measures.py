@@ -332,10 +332,9 @@ class EntanglementMeasures:
 
         #which parties to measure in what order
         parties_to_measure = []
-        for party_index in range(self.k_party_obj.k, 0, -1):
+        for party_index in range(self.k_party_obj.k - 1, -1, -1):
             if party_index != self.partyA and  party_index != self.partyB:
-                self.party_to_measure = party_index - 1
-                parties_to_measure.append(party_index - 1)
+                parties_to_measure.append(party_index)
             
         #print("Parties to measure = ", parties_to_measure)
         parties_measured = 0
@@ -345,6 +344,7 @@ class EntanglementMeasures:
         states_queue = []
         
         states_queue.append((self.psi, 1))
+        self.party_to_measure = parties_to_measure[0]
 
         while states_queue:
             if not isinstance(states_queue[0][0], Statevector):
@@ -372,14 +372,16 @@ class EntanglementMeasures:
                 parties_to_measure.pop(0)
                 parties_measured += 1
 
-                self.party_to_measure = parties_to_measure[0] - 1
 
-                if self.party_to_measure == 1:
+                if len(parties_to_measure) == 0:
                     measurements_to_make_for_this_party = 0
                     break
 
                 else:
                     measurements_to_make_for_this_party = self.k_party_obj.dims ** (parties_measured)
+                    #print("Parties to measure here= ", parties_to_measure)
+                    self.party_to_measure = parties_to_measure[0]
+
                     #print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
                     
         entropies = []
@@ -445,10 +447,9 @@ class EntanglementMeasures:
 
         #which parties to measure in what order
         parties_to_measure = []
-        for party_index in range(self.k_party_obj.k, 0, -1):
+        for party_index in range(self.k_party_obj.k - 1, -1, -1):
             if party_index != self.partyA and  party_index != self.partyB:
-                self.party_to_measure = party_index - 1
-                parties_to_measure.append(party_index - 1)
+                parties_to_measure.append(party_index)
             
         #print("Parties to measure = ", parties_to_measure)
         parties_measured = 0
@@ -458,6 +459,7 @@ class EntanglementMeasures:
         states_queue = []
         
         states_queue.append((self.psi, 1))
+        self.party_to_measure = parties_to_measure[0]
 
         while states_queue:
             if not isinstance(states_queue[0][0], Statevector):
@@ -485,14 +487,16 @@ class EntanglementMeasures:
                 parties_to_measure.pop(0)
                 parties_measured += 1
 
-                self.party_to_measure = parties_to_measure[0] - 1
 
-                if self.party_to_measure == 1:
+                if len(parties_to_measure) == 0:
                     measurements_to_make_for_this_party = 0
                     break
 
                 else:
                     measurements_to_make_for_this_party = self.k_party_obj.dims ** (parties_measured)
+                    #print("Parties to measure here= ", parties_to_measure)
+                    self.party_to_measure = parties_to_measure[0]
+
                     #print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
                     
         entropies = []
