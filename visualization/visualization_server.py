@@ -89,7 +89,7 @@ def prepare_state_data_evolving(statev1,statev2,name):
     dims=statev1.dims()
     e_stats={}
     o={"state":state_obj,"state2":state_obj2,"name":name,"parties":len(dims),"dims":dims,
-   "e_stats":e_stats,"is_changing":True,"steps":steps}
+   "e_stats":e_stats,"is_changing":True,"steps":steps}    
     em = EntanglementMeasures(N, k_party_obj_2, 2)
     for i in range(len(dims)):
         for j in range(i):
@@ -120,9 +120,9 @@ named_states={
     "w":  ( (2,2,2), [0,1,1,0,1,0,0,0]),
     "epr": ( (2,2,2), [1,1,0,0,0,0,1,1] ),
     "ghz4": ( (2,2,2,2), [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1] ),
-    #"322": ( (3,2,2), [1,1,0,0,0,0,1,1,0,0,0,0] ), #error!
-    #"ghz3":  ( (3,3,3),  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]),
-    #"changing":( (2,2,2), [1,0,0,0,0,0,0,1], [0,1,1,0,1,0,0,0]),
+    "322": ( (3,2,2), [1,1,0,0,0,0,1,1,0,0,0,0] ), #error!
+    "ghz3":  ( (3,3,3),  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]),
+    "changing":( (2,2,2), [1,0,0,0,0,0,0,1], [0,1,1,0,1,0,0,0]),
 }
 
 states={}
