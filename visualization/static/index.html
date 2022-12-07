@@ -3,7 +3,7 @@
 <head>
   <title>Quantum entanglement visualization</title>
 
-<script type="text/javascript" src="d3.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
 <script type="module">
 //d3.js
@@ -30,7 +30,7 @@ let svg = d3.select("body").append("svg")
 
 let titleBar = d3.select("body").append("div").style("position","absolute").style("top","0").style("width","100%")
 .style("text-align","center");
-let titleText=titleBar.append("p");console.log(titleText);
+let titleText=titleBar.append("p");//titleText.style("font-size",)
 
 let nodeRadius=20;
 let linkWidth=48;
@@ -325,7 +325,7 @@ function initState(data){
     }
   }
   setTimeout(()=>{
-    let text=data.name+" ";
+    let text="";//data.name+" ";
     for(let [i,state] of possibleStates.entries()){
       text+=((i>0)?"+":"")+complex2str(state.amplitude)+"|"+state.values.join("")+"> ";
     }
