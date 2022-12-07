@@ -300,7 +300,9 @@ function initState(data){
   function getQuditValues(index,dims){
     let result=[];
     for(let d of dims){
+
       result.unshift(index%d);
+      index=Math.floor(index/d);
     }
     return result;
   }
