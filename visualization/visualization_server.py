@@ -1,10 +1,12 @@
+#run this and the next block only
 
 import os
 import sys
 module_path = os.path.abspath(os.path.join('../locc'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-    
+
+# this block and the previous(if you can't include k_party otherwise) is the visualization server.py file
 import math
 import numpy as np
 import networkx as nx
@@ -50,6 +52,8 @@ def graph_state_from_qiskit(graph):
 
 
 def prepare_state_data(state_vector,name):
+    dummy=False
+    if "dummy" in name: dummy=True
     dims=state_vector.dims()
     k_party_dims=[ (1,[x]) for x in dims ]
     N=max(dims)
@@ -65,13 +69,19 @@ def prepare_state_data(state_vector,name):
         for j in range(i):
             if i==j: 
                 continue
-            max_e=em.get_le_upper_bound(k_party_obj, i, j)
-            min_e=em.get_le_lower_bound(k_party_obj, i, j)
+            if dummy:
+                max_e=2/3
+                min_e=1/3
+            else:
+                max_e=em.get_le_upper_bound(k_party_obj, i, j)
+                min_e=em.get_le_lower_bound(k_party_obj, i, j)
             e_stats[str(i)+","+str(j)]={"max":max_e,"min":min_e}
     result=json.dumps(o)
     return result
 
 def prepare_state_data_evolving(statev1,statev2,name):
+    dummy=False
+    if "dummy" in name: dummy=True
     party_arr=[]
     steps=5
     dims=statev1.dims()
@@ -89,16 +99,18 @@ def prepare_state_data_evolving(statev1,statev2,name):
     dims=statev1.dims()
     e_stats={}
     o={"state":state_obj,"state2":state_obj2,"name":name,"parties":len(dims),"dims":dims,
-   "e_stats":e_stats,"is_changing":True,"steps":steps}    
+   "e_stats":e_stats,"is_changing":True,"steps":steps}
     em = EntanglementMeasures(N, k_party_obj_2, 2)
     for i in range(len(dims)):
         for j in range(i):
             if i==j: 
                 continue
-            max_e=em.get_le_upper_bound_evolving(party_arr, i, j)
-            min_e=em.get_le_lower_bound_evolving(party_arr, i, j)
-            #max_e=[(x*1+(steps-x)*(2/3))/steps for x in range(steps)]
-            #min_e=[(x*0+(steps-x)*(1/3))/steps for x in range(steps)]
+            if dummy:
+                max_e=[(x*1+(steps-x)*(2/3))/steps for x in range(steps)]
+                min_e=[(x*0+(steps-x)*(1/3))/steps for x in range(steps)]
+            else:
+                max_e=em.get_le_upper_bound_evolving(party_arr, i, j)
+                min_e=em.get_le_lower_bound_evolving(party_arr, i, j)
             e_stats[str(i)+","+str(j)]={"max":max_e,"min":min_e}
     result=json.dumps(o)
     return result
@@ -119,17 +131,17 @@ named_states={
     "ghz":( (2,2,2), [1,0,0,0,0,0,0,1] ),
     "w":  ( (2,2,2), [0,1,1,0,1,0,0,0]),
     "epr": ( (2,2,2), [1,1,0,0,0,0,1,1] ),
-    "ghz4": ( (2,2,2,2), [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1] ),
-    "322": ( (3,2,2), [1,1,0,0,0,0,1,1,0,0,0,0] ), #error!
-    "ghz3":  ( (3,3,3),  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]),
-    "changing":( (2,2,2), [1,0,0,0,0,0,0,1], [0,1,1,0,1,0,0,0]),
+    "ghz4-dummy": ( (2,2,2,2), [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1] ),
+    #"322": ( (3,2,2), [1,1,0,0,0,0,1,1,0,0,0,0] ), #error!
+    #"ghz3":  ( (3,3,3),  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]),
+    #"changing":( (2,2,2), [1,0,0,0,0,0,0,1], [0,1,1,0,1,0,0,0]),
 }
 
 states={}
 
 init_states()
-state_name="ghz4"
-user_state=states["ghz4"]
+state_name="ghz4-dummy"
+user_state=states["ghz4-dummy"]
 
 
 

@@ -30,7 +30,7 @@ let svg = d3.select("body").append("svg")
 
 let titleBar = d3.select("body").append("div").style("position","absolute").style("top","0").style("width","100%")
 .style("text-align","center");
-let titleText=titleBar.append("p");//titleText.style("font-size",)
+let titleText=titleBar.append("p");titleText.style("font-size","22px")
 
 let nodeRadius=20;
 let linkWidth=48;
@@ -161,7 +161,7 @@ let linkTypes={
             let that=this;//need to be a named function to have this??
             let period=minPeriod+addedPeriod*Math.random(),offset=period*Math.random();
             function repeat() {
-              console.log(d,i,that);
+
               d3.select(that)
               //.selectAll(".line")
               .attr("stroke-width",(d)=>d.min*linkWidth)
@@ -189,7 +189,6 @@ let linkTypes={
 
 
 for(let type in linkTypes){
-  console.log(type);
   let g=svg.append("g")
       .attr("stroke-width",1)
       .attr("stroke", "#999")
@@ -301,7 +300,9 @@ function initState(data){
   function getQuditValues(index,dims){
     let result=[];
     for(let d of dims){
+
       result.unshift(index%d);
+      index=Math.floor(index/d);
     }
     return result;
   }
