@@ -12,21 +12,6 @@ from qiskit.quantum_info import Statevector
 
 import time
 
-class MinimizeStopper(object):
-    def __init__(self, max_sec=10):
-        self.max_sec = max_sec
-        self.start   = time.time()
-
-    def __call__(self, xk):
-        # callback to terminate if max_sec exceeded
-        elapsed = time.time() - self.start
-        if elapsed > self.max_sec:
-            print("Terminating optimization: time limit reached")
-            return True
-        else:
-            # you might want to report other stuff here
-            print("Elapsed: %.3f sec" % elapsed)
-
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
         self.k_party_obj = None
@@ -61,20 +46,19 @@ class EntanglementMeasures:
 
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
-
+        
         v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
-        minimize_stopper = MinimizeStopper()
 
         if self.k_party_obj.k > 3:
             res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
-                        options={'xatol': 1e-8, 'disp': True, 'maxiter':50})
+                        options={'xatol': 1e-5, 'disp': True, 'maxiter':40, 'maxfev': 30})
             print("Entanglement entropy = ", res.fun)
             return res.fun
 
         else:
 
             res = optimize.minimize(self.minimise_le, v, method='nelder-mead',
-                            options={'xatol': 1e-8, 'disp': True})
+                            options={'xatol': 1e-5, 'disp': True})
             print("Entanglement entropy = ", res.fun)
             return res.fun
 
@@ -98,13 +82,13 @@ class EntanglementMeasures:
 
         if self.k_party_obj.k > 3:
             res = optimize.minimize(self.maximise_le_multiparty, v, method='nelder-mead',
-                        options={'xatol': 1e-8, 'disp': True})
+                        options={'xatol': 1e-5, 'disp': True})
             print("Entanglement entropy = ", -1 * res.fun)
             return -1 * res.fun
 
         else:
             res = optimize.minimize(self.maximise_le, v, method='nelder-mead',
-                            options={'xatol': 1e-8, 'disp': True})
+                            options={'xatol': 1e-5, 'disp': True})
             print("Entanglement entropy = ", -1 * res.fun)
             return -1 * res.fun
 
@@ -140,14 +124,14 @@ class EntanglementMeasures:
 
             if self.k_party_obj.k > 3:
                 res = optimize.minimize(self.maximise_le_multiparty, v, method='nelder-mead',
-                            options={'xatol': 1e-8, 'disp': True})
+                            options={'xatol': 1e-5, 'disp': True})
                 print("Multiparty Entanglement entropy = ", -1 * res.fun)
                 min_le_array.append(res.fun)
 
 
             else:
                 res = optimize.minimize(self.maximise_le, v, method='nelder-mead',
-                                options={'xatol': 1e-8, 'disp': True})
+                                options={'xatol': 1e-5, 'disp': True})
                 print("Entanglement entropy = ", -1 * res.fun)
                 min_le_array.append(res.fun)
         
@@ -183,18 +167,17 @@ class EntanglementMeasures:
             self.k_party_obj = k_party_obj
 
             self.psi = self.k_party_obj.q_state
-            minimize_stopper = MinimizeStopper()
 
             if self.k_party_obj.k > 3:
                 res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
-                            options={'xatol': 1e-8, 'disp': True})
+                            options={'disp': True, 'maxiter':40, 'maxfev': 30})
                 print("Entanglement entropy = ", res.fun)
                 max_le_array.append(res.fun)
 
 
             else:
                 res = optimize.minimize(self.minimise_le, v, method='nelder-mead',
-                                options={'xatol': 1e-8, 'disp': True})
+                                options={'disp': True})
                 print("Entanglement entropy = ",  res.fun)
                 max_le_array.append(res.fun)
         
@@ -390,40 +373,45 @@ class EntanglementMeasures:
     
         for state in states_queue:
             dim1 = int(self.k_party_obj.dims ** (self.k_party_obj.k-1))
-            entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+            dim2 = int(self.k_party_obj.dims ** (self.k_party_obj.k-2))
+            dim3 = int(self.k_party_obj.state_dim() / dim2)
+            if self.k_party_obj.k == 4:
+                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 3 and self.partyB == 1):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
+                    
+                elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim2, dim3)))
+
+                else:
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+
+
+            elif self.k_party_obj.k == 5:
+                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 4) or (self.partyA == 3 and self.partyB == 4) :
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
+                    
+                elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim2, dim3)))
+
+                elif (self.partyA == 3 and self.partyB == 1) or (self.partyA == 4 and self.partyB == 1) or (self.partyA == 2 and self.partyB == 3):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim3, dim2)))
+
+                else:
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+
             posteriors.append(state[0].reshape(dim1, self.k_party_obj.dims))
             probabilities.append(state[1])
 
         #compute weighted average
         # print("Probabilites = ", probabilities)
         # print("Entropies = ", entropies)
+        self.starting_parameters = v
+
         avg_entropy = np.dot(probabilities, entropies)
         return -1 * avg_entropy
 
     def minimise_le_multiparty(self, v):
         self.psi = self.k_party_obj.q_state
-
-        # qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
-
-        # opt_parameters_list = np.array_split(v, qudits_to_measure)
-
-        # unitaries = []
-        # for o in opt_parameters_list:
-        #     #generate unitary matrix
-        #     M = np.zeros((self.N, self.N), dtype = complex)
-        #     for i in range(0,  self.N):
-        #         M[i][i] = o[i]
-            
-        #     vector_index = self.N
-        #     for row in range(0,  self.N - 1):
-        #         for column in range(row + 1,  self.N):
-        #             M[row][column] = o[vector_index] + 1j * o[vector_index+1]
-        #             M[column][row] = o[vector_index] - 1j * o[vector_index+1]
-        #             vector_index += 2
-
-        #     U = expm(1j * M)
-        #     unitaries.append(U)
-
 
         #generate unitary matrix
         M = np.zeros((self.N, self.N), dtype = complex)
@@ -505,12 +493,39 @@ class EntanglementMeasures:
     
         for state in states_queue:
             dim1 = int(self.k_party_obj.dims ** (self.k_party_obj.k-1))
-            entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+            dim2 = int(self.k_party_obj.dims ** (self.k_party_obj.k-2))
+            dim3 = int(self.k_party_obj.state_dim() / dim2)
+            if self.k_party_obj.k == 4:
+                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 3 and self.partyB == 1):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
+                    
+                elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim2, dim3)))
+
+                else:
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+
+
+            elif self.k_party_obj.k == 5:
+                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 4) or (self.partyA == 3 and self.partyB == 4) :
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
+                    
+                elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim2, dim3)))
+
+                elif (self.partyA == 3 and self.partyB == 1) or (self.partyA == 4 and self.partyB == 1) or (self.partyA == 2 and self.partyB == 3):
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim3, dim2)))
+
+                else:
+                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
+
             posteriors.append(state[0].reshape(dim1, self.k_party_obj.dims))
             probabilities.append(state[1])
 
         #compute weighted average
         # print("Probabilites = ", probabilities)
         # print("Entropies = ", entropies)
+        self.starting_parameters = v
+
         avg_entropy = np.dot(probabilities, entropies)
         return avg_entropy

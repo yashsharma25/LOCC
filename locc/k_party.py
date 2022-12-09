@@ -4,6 +4,8 @@ from qiskit.quantum_info import Statevector
 import numpy as np
 from qiskit.quantum_info import shannon_entropy
 from scipy.linalg.misc import norm
+from scipy.stats import unitary_group
+
 
 
 class k_party:
@@ -29,9 +31,13 @@ class k_party:
         self.state_desc = state_desc
         self.q_state = q_state
 
-    #get the Hilbert space dimension of the k-party state
-    def dims(self):
-        return self.dims
+    #get the Hilbert space dimension of single qudit of the k-party state
+    def state_dim(self):
+        state_dims = 1
+        for s in self.state_desc:
+            state_dims *= np.prod(s[1])
+
+        return state_dims
 
     #get hilbert space dimension of the specified party
     def get_dims_by_party(self, party_index):
@@ -97,12 +103,6 @@ class k_party:
     def local_operation(self, party_index, qudit_indices, unitary_operator):
         return
 
-    #measure the i'th qudit of the  j'th party
-    #update the state afte measurement
-    #projective measurement
-    def measure(self, party_index, qudit_indices):
-        self.q_state.measure(party_index)
-
     def measure_different_basis(self, party_index, qudit_indices, basis_matrix):
         self.q_state.evolve(basis_matrix)
         self.measure(party_index, qudit_indices)
@@ -127,7 +127,6 @@ class k_party:
         all_possible_posteriors = []
 
         while len(outcomes) < self.dims:
-        
             outcome, state = self.q_state.measure([qubit_to_measure])
             if outcome not in outcomes:
                 outcomes.append(outcome)
@@ -149,3 +148,30 @@ class k_party:
         entanglement_entropy = shannon_entropy(squared_singular_vals, base=2)
 
         return entanglement_entropy
+
+# What if even after measurement the state is still in superposition?
+# In a 4-party state, when we measure the 4th party, the other 3 parties are still in superposition
+
+
+# In a 3-party state, we measue the 3rd party, the other 2 parties are still in superposition
+# Yes, thats True
+# What do we do after that?
+# We take each of the state in the superposition and compute the entanglement entropy for that
+# Is that exactly what we do?
+# Yes
+
+# REMEMBER THAT ENTANGLEMENT ENTROPY CAN ONLY BE COMPUTED FOR A BIPARTITE STATE
+
+# But then with n qubits, how do we create a bipartite state
+# Just divide the n qubits into two parties
+
+# So in case of the GHZ state, how is the division taking place
+
+# When we measure the third party, we divide party A and B as one side
+# And party C is on the other side
+
+# When is the EE 0?
+# When the states are separable
+# The two parties are separable
+# There is a difference between measurement and tracing out
+# Always remember that
