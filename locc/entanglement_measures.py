@@ -10,8 +10,6 @@ from k_party import k_party
 from qiskit.quantum_info.operators import Operator
 from qiskit.quantum_info import Statevector
 
-import time
-
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
         self.k_party_obj = None
@@ -47,11 +45,13 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
         
-        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        #v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        v = np.random.uniform(0, 2*np.pi, (self.k_party_obj.k - 2) * self.k_party_obj.dims ** 2)
+
 
         if self.k_party_obj.k > 3:
             res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
-                        options={'xatol': 1e-5, 'disp': True, 'maxiter':40, 'maxfev': 30})
+                        options={'xatol': 1e-5, 'disp': True, 'maxiter':40, 'maxfev': 40})
             print("Entanglement entropy = ", res.fun)
             return res.fun
 
@@ -78,7 +78,8 @@ class EntanglementMeasures:
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
             self.party_to_measure = 0
 
-        v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        # v = np.random.uniform(0, 2*np.pi, self.k_party_obj.dims ** 2)
+        v = np.random.uniform(0, 2*np.pi, (self.k_party_obj.k - 2) * self.k_party_obj.dims ** 2)
 
         if self.k_party_obj.k > 3:
             res = optimize.minimize(self.maximise_le_multiparty, v, method='nelder-mead',
@@ -170,7 +171,7 @@ class EntanglementMeasures:
 
             if self.k_party_obj.k > 3:
                 res = optimize.minimize(self.minimise_le_multiparty, v, method='nelder-mead',
-                            options={'disp': True, 'maxiter':40, 'maxfev': 30})
+                            options={'disp': True, 'maxiter':40, 'maxfev': 40})
                 print("Entanglement entropy = ", res.fun)
                 max_le_array.append(res.fun)
 
@@ -269,175 +270,48 @@ class EntanglementMeasures:
         return -1 * self.minimise_le(v)
 
     def maximise_le_multiparty(self, v):
-        self.psi = self.k_party_obj.q_state
-
-        # qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
-
-        # opt_parameters_list = np.array_split(v, qudits_to_measure)
-
-        # unitaries = []
-        # for o in opt_parameters_list:
-        #     #generate unitary matrix
-        #     M = np.zeros((self.N, self.N), dtype = complex)
-        #     for i in range(0,  self.N):
-        #         M[i][i] = o[i]
-            
-        #     vector_index = self.N
-        #     for row in range(0,  self.N - 1):
-        #         for column in range(row + 1,  self.N):
-        #             M[row][column] = o[vector_index] + 1j * o[vector_index+1]
-        #             M[column][row] = o[vector_index] - 1j * o[vector_index+1]
-        #             vector_index += 2
-
-        #     U = expm(1j * M)
-        #     unitaries.append(U)
-
-
-        #generate unitary matrix
-        M = np.zeros((self.N, self.N), dtype = complex)
-        for i in range(0,  self.N):
-            M[i][i] = v[i]
-        
-        vector_index = self.N
-        for row in range(0,  self.N - 1):
-            for column in range(row + 1,  self.N):
-                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
-                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
-                vector_index += 2
-
-        U = expm(1j * M)
-
-        U_operator = Operator(U)
-
-        #get the indices of the qudits we want to measure
-        #qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
-
-
-        #which parties to measure in what order
-        parties_to_measure = []
-        for party_index in range(self.k_party_obj.k - 1, -1, -1):
-            if party_index != self.partyA and  party_index != self.partyB:
-                parties_to_measure.append(party_index)
-            
-        #print("Parties to measure = ", parties_to_measure)
-        parties_measured = 0
-        
-        measurements_to_make_for_this_party = 1
-
-        states_queue = []
-        
-        states_queue.append((self.psi, 1))
-        self.party_to_measure = parties_to_measure[0]
-
-        while states_queue:
-            if not isinstance(states_queue[0][0], Statevector):
-                previous_state_tuple =states_queue.pop(0)
-                self.psi = Statevector(previous_state_tuple[0])
-                prev_prob = previous_state_tuple[1]
-
-            else:
-                previous_state_tuple = states_queue.pop(0)
-                self.psi = previous_state_tuple[0]
-                prev_prob = previous_state_tuple[1]
-
-            self.psi = self.psi.evolve(U_operator, [self.party_to_measure])
-            q = k_party(self.k_party_obj.k, self.N, None, self.psi)
-
-            all_posteriors = q.measure_all_possible_posteriors_qiskit(self.party_to_measure)
-
-            for a in all_posteriors:
-                x = (a[0], a[1] * prev_prob)
-                states_queue.append(x)
-
-            measurements_to_make_for_this_party -= 1
-            if measurements_to_make_for_this_party == 0:
-                #print("Finished measurements for party_num = ", self.party_to_measure)
-                parties_to_measure.pop(0)
-                parties_measured += 1
-
-
-                if len(parties_to_measure) == 0:
-                    measurements_to_make_for_this_party = 0
-                    break
-
-                else:
-                    measurements_to_make_for_this_party = self.k_party_obj.dims ** (parties_measured)
-                    #print("Parties to measure here= ", parties_to_measure)
-                    self.party_to_measure = parties_to_measure[0]
-
-                    #print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
-                    
-        entropies = []
-        probabilities = []
-        posteriors = []
-    
-        for state in states_queue:
-            dim1 = int(self.k_party_obj.dims ** (self.k_party_obj.k-1))
-            dim2 = int(self.k_party_obj.dims ** (self.k_party_obj.k-2))
-            dim3 = int(self.k_party_obj.state_dim() / dim2)
-            if self.k_party_obj.k == 4:
-                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 3 and self.partyB == 1):
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
-                    
-                elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim2, dim3)))
-
-                else:
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
-
-
-            elif self.k_party_obj.k == 5:
-                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 4) or (self.partyA == 3 and self.partyB == 4) :
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
-                    
-                elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim2, dim3)))
-
-                elif (self.partyA == 3 and self.partyB == 1) or (self.partyA == 4 and self.partyB == 1) or (self.partyA == 2 and self.partyB == 3):
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim3, dim2)))
-
-                else:
-                    entropies.append(q.entanglement_entropy_for_state(state[0].reshape(dim1, self.k_party_obj.dims)))
-
-            posteriors.append(state[0].reshape(dim1, self.k_party_obj.dims))
-            probabilities.append(state[1])
-
-        #compute weighted average
-        # print("Probabilites = ", probabilities)
-        # print("Entropies = ", entropies)
-        self.starting_parameters = v
-
-        avg_entropy = np.dot(probabilities, entropies)
-        return -1 * avg_entropy
+        return -1 * self.minimise_le_multiparty(v)
 
     def minimise_le_multiparty(self, v):
         self.psi = self.k_party_obj.q_state
 
-        #generate unitary matrix
-        M = np.zeros((self.N, self.N), dtype = complex)
-        for i in range(0,  self.N):
-            M[i][i] = v[i]
-        
-        vector_index = self.N
-        for row in range(0,  self.N - 1):
-            for column in range(row + 1,  self.N):
-                M[row][column] = v[vector_index] + 1j * v[vector_index+1]
-                M[column][row] = v[vector_index] - 1j * v[vector_index+1]
-                vector_index += 2
+        #qudits_to_measure = self.k_party_obj.state_desc[self.party_to_measure][0]
+        qudits_to_measure = self.k_party_obj.k - 2
 
-        U = expm(1j * M)
+        #print("qudits to measure =", qudits_to_measure)
+        opt_parameters_list = np.array_split(v, qudits_to_measure)
 
-        U_operator = Operator(U)
-
-        #get the indices of the qudits we want to measure
-        #qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
-
+        # print("opt parameters list =", opt_parameters_list)
+        # print("opt parameters list size =", len(opt_parameters_list))
 
         #which parties to measure in what order
         parties_to_measure = []
         for party_index in range(self.k_party_obj.k - 1, -1, -1):
             if party_index != self.partyA and  party_index != self.partyB:
                 parties_to_measure.append(party_index)
+
+        unitaries = {}
+        #for every party's measurement, generate a different unitary
+        for index, o in enumerate(opt_parameters_list):
+            #generate unitary matrix
+            M = np.zeros((self.N, self.N), dtype = complex)
+            for i in range(0,  self.N):
+                M[i][i] = o[i]
+            
+            vector_index = self.N
+            for row in range(0,  self.N - 1):
+                for column in range(row + 1,  self.N):
+                    M[row][column] = o[vector_index] + 1j * o[vector_index+1]
+                    M[column][row] = o[vector_index] - 1j * o[vector_index+1]
+                    vector_index += 2
+
+            U = expm(1j * M)
+            unitaries[parties_to_measure[index]] = U
+
+
+        #get the indices of the qudits we want to measure
+        #qudit_indices = self.k_party_obj.get_qudit_index_range(self.party_to_measure)
+
             
         #print("Parties to measure = ", parties_to_measure)
         parties_measured = 0
@@ -448,6 +322,7 @@ class EntanglementMeasures:
         
         states_queue.append((self.psi, 1))
         self.party_to_measure = parties_to_measure[0]
+        U_operator = unitaries[self.party_to_measure]
 
         while states_queue:
             if not isinstance(states_queue[0][0], Statevector):
@@ -484,6 +359,7 @@ class EntanglementMeasures:
                     measurements_to_make_for_this_party = self.k_party_obj.dims ** (parties_measured)
                     #print("Parties to measure here= ", parties_to_measure)
                     self.party_to_measure = parties_to_measure[0]
+                    U_operator = unitaries[self.party_to_measure]
 
                     #print("Measurements to make for the next party = ", measurements_to_make_for_this_party)
                     
@@ -496,7 +372,7 @@ class EntanglementMeasures:
             dim2 = int(self.k_party_obj.dims ** (self.k_party_obj.k-2))
             dim3 = int(self.k_party_obj.state_dim() / dim2)
             if self.k_party_obj.k == 4:
-                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 3 and self.partyB == 1):
+                if (self.partyA == 3 and self.partyB == 2) or (self.partyA == 3 and self.partyB == 1) or (self.partyA == 2 and self.partyB == 3) or (self.partyA == 1 and self.partyB == 3):
                     entropies.append(q.entanglement_entropy_for_state(state[0].reshape(self.k_party_obj.dims, dim1)))
                     
                 elif (self.partyA == 1 and self.partyB == 2) or (self.partyA == 2 and self.partyB == 1):
@@ -528,4 +404,4 @@ class EntanglementMeasures:
         self.starting_parameters = v
 
         avg_entropy = np.dot(probabilities, entropies)
-        return avg_entropy
+        return 1 * avg_entropy
