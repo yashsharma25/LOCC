@@ -107,11 +107,18 @@ def prepare_state_data_evolving(statev1,statev2,name):
                 continue
             if dummy:
                 max_e=[(x*1+(steps-x)*(2/3))/steps for x in range(steps)]
-                min_e=[(x*0+(steps-x)*(1/3))/steps for x in range(steps)]
             else:
                 max_e=em.get_le_upper_bound_evolving(party_arr, i, j)
+            e_stats[str(i)+","+str(j)]={"max":max_e}
+    for i in range(len(dims)):
+        for j in range(i):
+            if i==j: 
+                continue
+            if dummy:
+                min_e=[(x*0+(steps-x)*(1/3))/steps for x in range(steps)]
+            else:
                 min_e=em.get_le_lower_bound_evolving(party_arr, i, j)
-            e_stats[str(i)+","+str(j)]={"max":max_e,"min":min_e}
+            e_stats[str(i)+","+str(j)]["min"]=min_e
     result=json.dumps(o)
     return result
 
@@ -131,7 +138,7 @@ named_states={
     "ghz":( (2,2,2), [1,0,0,0,0,0,0,1] ),
     "w":  ( (2,2,2), [0,1,1,0,1,0,0,0]),
     "epr": ( (2,2,2), [1,1,0,0,0,0,1,1] ),
-    "ghz4-dummy": ( (2,2,2,2), [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1] ),
+    "ghz4": ( (2,2,2,2), [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1] ),
     #"322": ( (3,2,2), [1,1,0,0,0,0,1,1,0,0,0,0] ), #error!
     #"ghz3":  ( (3,3,3),  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]),
     #"changing":( (2,2,2), [1,0,0,0,0,0,0,1], [0,1,1,0,1,0,0,0]),
@@ -140,8 +147,8 @@ named_states={
 states={}
 
 init_states()
-state_name="ghz4-dummy"
-user_state=states["ghz4-dummy"]
+state_name="ghz4"
+user_state=states["ghz4"]
 
 
 
@@ -170,7 +177,8 @@ def index_state(name):
     else:
         strs=name.split(",") #eg. each number is like 1+2j
         array=[complex(x) for x in strs]
-        user_state=prepare_state_data(custom_state_from_qiskit(array),name)
+        dims=[2 for i in range(int(math.log2(len(array))))]
+        user_state=prepare_state_data(custom_state_with_dims(array,dims),name)
         state_name=name
         states[name]=user_state
     #if state_name not in states: state_name="ghz"
