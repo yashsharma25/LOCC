@@ -9,239 +9,496 @@
 //d3.js
 //https://cdn.jsdelivr.net/npm/d3@7
 
-let width=800,height=800;
-let stateData;let possibleStates=[];
+let width=1024,height=768;
+let stateData;let viewObj;
 
-let forceNode = d3.forceManyBody().strength(-400);
-let forceLink = d3.forceLink([]).id((x) => x.id).distance(500);
-
-let simulation = d3.forceSimulation()
-    .alphaTarget(0.2)
-    .force("link", forceLink)
-    .force("charge", forceNode)
-    .force("center",  d3.forceCenter())
-    .on("tick", tick);
-
-let svg = d3.select("body").append("svg")
-        .attr("width", width)
-        .attr("height", height)
+d3.select("body").attr("width", "100%").attr("height", "100%").attr("position", "absolute");
+let svgContainer=d3.select("body").append("div").style("width", "100%").style("height", "100%").attr("position", "absolute");
+let svg =svgContainer.append("svg")
+.attr("position", "absolute")
+        .attr("width", "100%")
+        .attr("height", "100%")
         .attr("viewBox", [-width / 2, -height / 2, width, height])
-        .attr("style", "max-width: 100%; height: auto; height: intrinsic;");
+        .attr("style", "max-height: 100%; width: auto; height: intrinsic;")
+        .attr("preserveAspectRatio","xMidYMid meet");
+let svgDefs = svg.append('defs');
+/*
+let cloudDef=svgDefs.append("g").attr("id","cloud").style("opacity", 0.5);
+
+		cloudDef.selectAll("circle").data(circle_data).enter()
+			.append("circle")
+			.attr("cx", function(d){return d[0]})
+		  	.attr("cy", function(d){return d[1]})
+		  	.attr("r", function(d){return d[2]})
+		  	.style("fill", "steelblue")
+
+		svg.append("g").attr("transform","translate(0,0)").attr("class","cloud")
+		   .append("use").attr("xlink:href","#cloud")
+
+		svg.append("g").attr("transform","translate(100,0)").attr("class","cloud")
+		   .append("use").attr("xlink:href","#cloud")
+
+		svg.append("g").attr("transform","translate(200,0)").attr("class","cloud")
+		   .append("use").attr("xlink:href","#cloud")
+
+		setInterval( function(){
+		  d3.selectAll("g.cloud").transition()
+		    .attr("transform", function(){
+		    	return "translate(" + Math.random() * 200 + ", 0)"
+		    })
+		}, 1000)
+
+*/
+
+/*
+We should define the sim and the displayed items in a structure, say one set of objects for normal (qubit) level rendering, 1 set of outcome-level, and they may interact? Can even define types of links between types of node-like objects and enable/disable them.
+
+As for the measurement/outcoes rendering, I ant the forces to be able to make all the nodes align in patterns that feflect how many possibilities there are and whether there's any pattern in them. Also I want the rotation to mean something, for example if a qubbit is measured in 0/1, all measurement outcomes that differ in it should be aligned on the vertical axis, and if it's +/- it could be the horizontal axis? Apply forces on inter-outcome links in such a way that they only work/or mostly work in the given axis, so 0000 and 1111 would want to line up vertically, hile a state that is (0+1)x (000+111) would want to look sort of like a diamond shape, but of the user rotates qubit 0 basis so that it's +/-, it would become +x(000+111) thus only two observed outcomes are left
+
+The same nodes could smoothly change position by forces without having to create and delete nodes; a node receives force to/from other nodes based on their outcome bits and basis; say if one has 0 in a position and another has 1 in the same position, and both have large possibilities, then they have a large force pushing the 0 one up and teh 1 down; to disambiguate between nodes with the same number of 1s, I think the leftmost 1 should be more to teh left and rightmost 1 goes to the right, as people would expect. If the basis for the bit is +/- then the force tends to be horizontal (with the leftmost positive result tending towards the left) etc.
+*/
+
+let ffluxGradient=svgDefs.append("linearGradient").attr("gradientTransform","rotate(226, 0.5, 0.5)")
+                        .attr("x1","50%").attr("y1","0%").attr("x2","50%").attr("y2","100%").attr("id","ffflux-gradient");
+
+ffluxGradient.append("stop").attr("stop-color","hsl(179, 100%, 72%)").attr("stop-opacity","1").attr("offset","0%");
+ffluxGradient.append("stop").attr("stop-color","hsl(227, 100%, 50%)").attr("stop-opacity","1").attr("offset","100%");
+
+let ffluxFilter=svgDefs.append("filter").attr("x","-20%").attr("y","-20%").attr("filterUnits","objectBoundingBox")
+                                    .attr("primitiveUnits","userSpaceOnUse").attr("color-interpolation-filters","sRGB");
+ffluxFilter.append("feTurbulence").attr("type","fractalNoise").attr("baseFrequency","0.006 0.004").attr("numOctaves","1")  .attr("seed","2").attr("stitchTiles","stitch").attr("x","0%").attr("y","0%").attr("width","100%")
+.attr("height","100%");
+ffluxFilter.append("feGaussianBlur").attr("stdDeviation","13 80").attr("in","turbulence").attr("edgeMode","duplicate")  .attr("result","blur").attr("x","0%").attr("y","0%").attr("width","100%").attr("height","100%");
+ffluxFilter.append("feBlend").attr("mode","hard-light").attr("in","SourceGraphic").attr("in2","blur")  .attr("result","blend").attr("x","0%").attr("y","0%").attr("width","100%").attr("height","100%");
+
+let backgroundRect=svg.append("rect").attr("width","100%").attr("height","100%").attr("x","-50%").attr("y","-50%").attr("fill","url(#ffflux-gradient)").attr("filter","url(#ffflux-filter)");
+
+
 
 let titleBar = d3.select("body").append("div").style("position","absolute").style("top","0").style("width","100%")
-.style("text-align","center");
-let titleText=titleBar.append("p");titleText.style("font-size","22px")
+.style("text-align","right").style("color","white");
+let titleText=titleBar.append("p");titleText.style("font-size","30px")
+
+let basisBar = d3.select("body").append("div").style("position","absolute").style("top","20%").style("width","100%")
+.style("text-align","right").style("color","white");
+let basisText=basisBar.append("p");basisBar.style("font-size","30px")
+
+
 
 let nodeRadius=20;
 let linkWidth=48;
 let linkAnimPeriod=2000,minPeriod=1000,addedPeriod=1000;
 let timestep=0,time=0,maxtimestep=100;
 
-let nodeTypes={
-  node:{
-    type:"circle",
-    init:(g)=>{
-      g.attr("stroke-width", 3)
-      .style('stroke', '#def')
-      .style('fill', 'none')
-      ;
-    },
-    update:(selection)=>{
-          selection
-          .attr("r", (d)=>(d.dim?Math.log2(d.dim):1)*nodeRadius)
-          .call(drag(simulation));
-          ;
-    },
-    tick:(selection)=>{
-      selection
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
-    }
-  },
-  outcome:{
-    type:"circle",
-    init:(g)=>{
-      g.attr("stroke-width", 2);
-    },
-    update:(selection)=>{
-          selection
-          .attr("r", (d)=>{
-            let result=possibleStates[0].values[d.id];
-            if(result==0) return nodeRadius/2-2;
-            else return Math.log2(result)*nodeRadius })
-          //.call(drag(simulation));
-          ;
-          //let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
+let simulation;
 
-    },
-    tick:(selection)=>{
-      selection
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-        .attr("r", (d)=>{
-          let stateid=Math.min(Math.floor(Math.abs(timestep-1)/100),possibleStates.length-1);
-          let result=possibleStates[stateid].values[d.id];
-          if(result==0) return nodeRadius/2-2;
-          else return (Math.log2(result)+1)*nodeRadius })
-        //.call(drag(simulation));
-        ;
-    }
-  },
-  label:{
-    type:"text",
-    init:(g)=>{
-      g.text(function(d) {
-        return d&&d.id;
-      })
-      //.style('stroke', '#fff')
-      .style('fill', '#fff')
-      .style('font-size', '16px')
-      .attr('x', 6)
-      .attr('y', 3);
-    },
-    update:(selection)=>{
-      selection.text(function(d) {
-        return d.id;
-      });
 
-    },
-    tick:(selection)=>{
-      selection
-        .attr("x", d => d.x-3)
-        .attr("y", d => d.y+3);
-    }
-  }
-}
-let linkTypes={
-  outline:{
-    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#eee")},
-    update:(selection)=>{selection.attr("stroke-width",(d)=>1.05*linkWidth)}
-  },
-  max:{
-    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#adf")},
-    update:(selection)=>{
-      if(stateData){
-        if(stateData.is_changing){
-          selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)
+let simDef={
+  objects:{//node-like objects
+    qubits:{
+      data:(data)=>{
+        let nodes=[];
+        for(let i=0;i<data.dims.length;i++){
+          nodes.push( {id:i,dim:data.dims[i],index:i,party:i});
         }
-        else {
-          selection.attr("stroke-width",(d)=>d.max*linkWidth)
-        }
-      }
-    },
+        return nodes;
+      },
+      svg:{
+        node:{ // outline actually
+          type:"circle",
+          init:(g)=>{
+            g.attr("stroke-width", 3)
+            .style('stroke', '#def')
+            .style('fill', 'rgba(255,255,255,0.05)')
+            .style("filter"," drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4))");
+            ;
+          },
+          update:(selection)=>{
+                selection
+                .attr("r", (d)=>(d.dim?Math.log2(d.dim):1)*nodeRadius)
+                .call(drag(simulation));
+                ;
+          },
+        },
+        outcome:{
+          type:"circle",
+          init:(g)=>{
+            g.attr("stroke-width", 2);
+          },
+          update:(selection)=>{
+                selection
+                .attr("r", (d)=>{
+                  let result=viewObj.objects.possibilities[0].values[d.id];
+                  if(result==0) return nodeRadius/2-2;
+                  else return Math.log2(result)*nodeRadius })
+                .call(drag(simulation));
+                ;
+                //let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
 
-    tick:(selection)=>{
-      if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)}
-    }
-  },
-  min:{
-    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#35a")},
-    update:(selection)=>{
-      selection.attr("stroke-width",(d)=>{(stateData.is_changing)?(d.min[timestep]*linkWidth):(d.min*linkWidth)});
-      if(stateData&&(!stateData.is_changing)){
-          //variant: synchronized animation with the same period for all
-          /*
-          function repeat() {
+          },
+          tick:(selection)=>{
             selection
-            .attr("stroke-width",(d)=>d.min*linkWidth)
-            .transition()
-            .duration(linkAnimPeriod)
-            .attr("stroke-width",(d)=>d.max*linkWidth)
-            .transition()
-            .duration(linkAnimPeriod)
-            .attr("stroke-width",(d)=>d.min*linkWidth)
-            .on("end", repeat);
+              .attr("r", (d)=>{
+                let stateid=Math.min(Math.floor(Math.abs(timestep-1)/100),viewObj.objects.possibilities.length-1);
+                let result=viewObj.objects.possibilities[stateid].values[d.id];
+                if(result==0) return nodeRadius/2-2;
+                else return (Math.log2(result)+1)*nodeRadius })
+              //.call(drag(simulation));
+              ;
           }
-          repeat();
-          */
+        },
+        label:{
+          type:"text",
+          init:(g)=>{
+            g.text(function(d) {
+              return d&&d.id;
+            })
+            //.style('stroke', '#fff')
+            .style('fill', '#fff')
+            .style('font-size', '16px').style("pointer-events","none")
+            .attr('x', 6)
+            .attr('y', 3);
+          },
+          update:(selection)=>{
+            selection.text(function(d) {
+              return d.id;
+            });
 
-          //variant: each edge has its own period and offset, which are random
+          },
+          offset:{x:-3,y:3},
+        },
+      },
+    },
+    outcomes:{
+      data:(data)=>{
+        let nodes=[];
+        for(let [i,x] of data.state.entries()){
+          let values=getQuditValues(i,data.dims);
+          let bits=values.join("");
+          let prob=Math.sqrt(x.re*x.re+x.im*x.im);
+          let phase=Math.atan(x.im/x.re);
+          nodes.push( {id:i,state:i,values:values,index:i,prob:prob,amplitude:x,phase:phase,size:prob,strength:prob,bits:bits});
 
-          selection.each(function my(d,i){
-            let that=this;//need to be a named function to have this??
-            let period=minPeriod+addedPeriod*Math.random(),offset=period*Math.random();
-            function repeat() {
+        }
+        return nodes;
+      },
+      svg:{
+        node:{ // outline actually
+          type:"circle",
+          init:(g)=>{
+            g.attr("stroke-width", 3)
+            .style('stroke', '#def')
+            .style('fill', '#def')
+            ;
+          },
+          update:(selection)=>{
+                selection
+                .attr("r", (d)=>(d.prob?d.prob*0.6+0.1:0)*nodeRadius)
+                .call(drag(simulation));
+                ;
+          },
+        },
 
-              d3.select(that)
-              //.selectAll(".line")
-              .attr("stroke-width",(d)=>d.min*linkWidth)
-              .transition()
-              .duration(period)
-              .attr("stroke-width",(d)=>d.max*linkWidth)
-              .transition()
-              .duration(period)
-              .attr("stroke-width",(d)=>d.min*linkWidth)
-              .on("end", repeat);
+        label:{
+          type:"text",
+          init:(g)=>{
+            g.text(function(d) {
+              return d&&d.id;
+            })
+            //.style('stroke', '#fff')
+            .style('fill', '#444')
+            .style('font-size', '10px')
+            .attr('x', 6)
+            .attr('y', 3);
+          },
+          update:(selection)=>{
+            selection.text(function(d) {
+              return d.bits;
+            }).attr("opacity", (d)=>(d.prob?d.prob*0.6+0.1:0)*nodeRadius);
+
+          },
+          offset:{x:-8,y:3},
+        },
+      }
+    },
+    possibilities:{
+      data:(data)=>{
+        let possibleStates=[];
+        for(let [i,x] of data.state.entries()){
+          let values=getQuditValues(i,data.dims);
+          let prob=Math.sqrt(x.re*x.re+x.im*x.im);
+          let phase=Math.atan(x.im/x.re);
+          if(prob==0)continue;
+          let obj={prob:prob,values:values,amplitude:x,phase:phase}
+          possibleStates.push(obj);
+
+          let text="";//data.name+" ";
+          for(let [i,state] of possibleStates.entries()){
+            text+=((i>0)?"+":"")+'<span style="'+"color:"+d3.hsl(state.phase/2*Math.PI,1,0.7-state.prob*0.2).formatHsl() +'">'+complex2str(state.amplitude)+"</span> <b>|"+state.values.join("")+"\u3009</b> ";
+          }
+          titleText.html(text);
+          if(data.steps){maxtimestep=data.steps;}
+          else{maxtimestep=possibleStates*100;}
+          timestep=0;time=0;
+
+
+        }
+        return possibleStates;
+      }
+    }
+  },
+  relations:{
+    //link-like objects
+    qubit_entanglement:{
+      source:"qubits",
+      directed:false,
+      data:(data)=>{
+        let links=[];
+        for(let key in data.e_stats){
+          let st=key.split(",").map((x)=>parseInt(x.trim()));
+          let value=data.e_stats[key];
+          links.push({source:st[0],target:st[1],max:value.max,min:value.min});
+          //note: d3 graph would want source and target to be node references
+        }
+        return links;
+      },
+      svg:{
+        outline:{
+          init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#eee").style("filter"," drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4))");},
+          update:(selection)=>{selection.attr("stroke-width",(d)=>1.05*linkWidth)}
+        },
+        max:{
+          init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#adf")},
+          update:(selection)=>{
+            if(stateData){
+              if(stateData.is_changing){
+                selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)
+              }
+              else {
+                selection.attr("stroke-width",(d)=>d.max*linkWidth)
+              }
             }
-            setTimeout(repeat,offset);
-          });
+          },
+          tick:(selection)=>{
+            if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)}
+          }
+        },
+        min:{
+          init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#35a")},
+          update:(selection)=>{
+            selection.attr("stroke-width",(d)=>{(stateData.is_changing)?(d.min[timestep]*linkWidth):(d.min*linkWidth)});
+            if(stateData&&(!stateData.is_changing)){
+                //variant: synchronized animation with the same period for all
+                /*
+                function repeat() {
+                  selection></
+                  .attr("stroke-width",(d)=>d.min*linkWidth)
+                  .transition()
+                  .duration(linkAnimPeriod)
+                  .attr("stroke-width",(d)=>d.max*linkWidth)
+                  .transition()
+                  .duration(linkAnimPeriod)
+                  .attr("stroke-width",(d)=>d.min*linkWidth)
+                  .on("end", repeat);
+                }
+                repeat();
+                */
+                //variant: each edge has its own period and offset, which are random
+                selection.each(function my(d,i){
+                  let that=this;//need to be a named function to have this??
+                  let period=minPeriod+addedPeriod*Math.random(),offset=period*Math.random();
+                  function repeat() {
 
+                    d3.select(that)
+                    //.selectAll(".line")
+                    .attr("stroke-width",(d)=>d.min*linkWidth)
+                    .transition()
+                    .duration(period)
+                    .attr("stroke-width",(d)=>d.max*linkWidth)
+                    .transition()
+                    .duration(period)
+                    .attr("stroke-width",(d)=>d.min*linkWidth)
+                    .on("end", repeat);
+                  }
+                  setTimeout(repeat,offset);
+                });
+
+
+            }
+          },
+          tick:(selection)=>{
+            if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.min[timestep]*linkWidth)}
+          }
+        }
 
       }
     },
-    tick:(selection)=>{
-      if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.min[timestep]*linkWidth)}
-    }
-  }
-
-}
+    outcome_similarity:{
+      source:"outcomes",
+      directed:false,
+      data:(data,outcomes)=>{
 
 
+        let links=[];
+        for(let i=0;i<outcomes.length;i++){
+          for(let j=i+1;j<outcomes.length;j++){
+            if(outcomes[i].prob==0||outcomes[j].prob==0){continue;}
+            links.push({source:i,target:j,max:0.1,min:0,strength:getSimilarity(outcomes[i].values,outcomes[j].values)*0.05});
 
-for(let type in linkTypes){
-  let g=svg.append("g")
+          }
+        }
+        return links;
+      },
+      svg:{
+        outline:{
+          init:(g)=>{
+            g.attr("stroke-opacity", 0.2).attr("stroke", "#ddf")
+          },
+          update:(selection)=>{selection.attr("stroke-width",(d)=>0.05*linkWidth)}
+        },
+      }
+    },
+    qubit_outcome_association:{
+      source:"qubits",
+      target:"outcomes",
+      directed:true,
+      data:(data,qubits,outcomes)=>{
+        function getSimilarity(values1,values2){
+          let a=0;
+          for(let i=0;i<values1.length;i++){
+            if(values1[i]==values2[i]){a++;}
+          }
+          return a/values1.length;
+        }
+
+        let links=[];
+        for(let i=0;i<qubits.length;i++){
+          for(let j=0;j<outcomes.length;j++){
+            if(outcomes[j].values[i]&&outcomes[j].prob>0){
+              links.push({source:i,target:j,max:0.1,min:0,distance:0.1,strength:outcomes[j].prob*0.001});
+            }
+
+
+          }
+        }
+        return links;
+      },
+      svg:{
+        outline:{
+          init:(g)=>{
+            g.attr("stroke-opacity", 0.1).attr("stroke", "#ddd")
+          },
+          update:(selection)=>{selection.attr("stroke-width",(d)=>0.05*linkWidth)}
+        },
+      }
+    },
+
+  },
+
+
+};
+
+
+
+let forceNode = d3.forceManyBody().strength((d)=>((d.strength*-20-1)||-10));
+let forceLink = d3.forceLink([]).id((x) => x.id)
+        .distance((d)=>((d.distance*300)||300))
+        .strength((d)=>{let result=d.strength*d.source.strength*d.target.strength*5+0.01; if (isNaN(result))return 1; else return result;});
+
+function initSimulation(){
+
+  simulation=d3.forceSimulation()
+      .alphaTarget(0.2)
+      .force("link", forceLink)
+      .force("charge", forceNode)
+      .force("center",  d3.forceCenter())
+      .on("tick", tick);
+
+
+  for(let relationName in simDef.relations){
+    let relDef=simDef.relations[relationName];
+    let svgs=relDef.svg;
+    if(!svgs)continue;
+    for(let type in svgs){
+      console.log(type);
+      let elemType=svgs[type].type||"line";
+      let g=svg.append("g")
       .attr("stroke-width",1)
       .attr("stroke", "#999")
       .attr("stroke-opacity", 0.6)
-      .attr("stroke-linecap", "round");
-
-    linkTypes[type].selection=g.selectAll("line");
-    if(linkTypes[type].init){
-      linkTypes[type].init(g);
+      .attr("stroke-linecap", "round");;
+      g.attr("name",relationName+"-"+type);
+        svgs[type].selection=g.selectAll(elemType);
+        if(svgs[type].init){
+          svgs[type].init(g);
+        }
     }
-
-}
-
-for(let type in nodeTypes){
-  console.log(type);
-  let elemType=nodeTypes[type].type;
-  let g=svg.append("g");
-
-
-    nodeTypes[type].selection=g.selectAll(elemType);
-    if(nodeTypes[type].init){
-      nodeTypes[type].init(g);
+  }
+  for(let objectName in simDef.objects){
+    let objDef=simDef.objects[objectName];
+    let svgs=objDef.svg;
+    if(!svgs)continue;
+    for(let type in svgs){
+      console.log(type);
+      let elemType=svgs[type].type||"circle";
+      let g=svg.append("g");g.attr("name",objectName+"-"+type);
+        svgs[type].selection=g.selectAll(elemType);
+        if(svgs[type].init){
+          svgs[type].init(g);
+        }
     }
-
+  }
 }
 
 
 
 function tick() {
-  for(let type in linkTypes){
-    linkTypes[type].selection
-    .attr("x1", d => d.source.x)
-    .attr("y1", d => d.source.y)
-    .attr("x2", d => d.target.x)
-    .attr("y2", d => d.target.y);
+  for(let relationName in simDef.relations){
+    let relDef=simDef.relations[relationName];
+    let svgs=relDef.svg;
+    if(!svgs)continue;
+    for(let type in svgs){
+      svgs[type].selection
+      .attr("x1", d => d.source.x)
+      .attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x)
+      .attr("y2", d => d.target.y);
 
-    if(linkTypes[type].tick){
-      linkTypes[type].tick(linkTypes[type].selection);
-    }
-
-
-  }
-  for(let type in nodeTypes){
-    if(nodeTypes[type].tick){
-      nodeTypes[type].tick(nodeTypes[type].selection);
+      if(svgs[type].tick){
+        svgs[type].tick(svgs[type].selection);
+      }
     }
   }
-
-
+  for(let objectName in simDef.objects){
+    let objDef=simDef.objects[objectName];
+    let svgs=objDef.svg;
+    if(!svgs)continue;
+    for(let type in svgs){
+      if(svgs[type].tick){
+        svgs[type].tick(svgs[type].selection);
+      }
+      let offsetX=0,offsetY=0;
+      if(svgs[type].offset){
+        offsetX=svgs[type].offset.x;
+        offsetY=svgs[type].offset.y;
+      }
+      if(svgs[type].type===undefined||svgs[type].type=="circle"){
+        svgs[type].selection
+        .attr("cx", d => d.x+offsetX)
+        .attr("cy", d => d.y+offsetY);
+      }
+      if(svgs[type].type=="text"){
+        svgs[type].selection
+        .attr("x", d => d.x+offsetX)
+        .attr("y", d => d.y+offsetY);
+      }
+    }
+  }
+  //todo:better animation step management
   time+=0.087;if(time>=maxtimestep){time=-maxtimestep+0.01;}
   timestep=Math.floor(Math.abs(time));
-
 }
+
 function drag(simulation) {
   function dragstarted(event) {
     if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -266,102 +523,127 @@ function drag(simulation) {
     .on("end", dragended);
 }
 
-function setData(data){
-  console.log(data);
+function updateView(view){
+  console.log(view);
+  //now this is responsible for creating the active view-and-force-objects
 
+  let graph={nodes:[],links:[]};
 
-  simulation.nodes(data.nodes);
-  forceLink.links(data.links);
-  for(let type in linkTypes){
-    linkTypes[type].selection=linkTypes[type].selection.data(data.links).join(linkTypes[type].type||"line");
-    linkTypes[type].update(linkTypes[type].selection);
+  for(let name in simDef.objects){
+    let objDef=simDef.objects[name];
+    let data=view.objects[name];
+    graph.nodes=graph.nodes.concat(data);
+    let svgs=objDef.svg;
+    if(!svgs)continue;
+    for(let type in svgs){
+      svgs[type].selection=svgs[type].selection.data(data,function(d){return d.id;}).join(svgs[type].type||"circle");
+      svgs[type].update(svgs[type].selection);
+    }
   }
-  for(let type in nodeTypes){
-    nodeTypes[type].selection=nodeTypes[type].selection
-      .data(data.nodes,function(d){return d.id;}).join(nodeTypes[type].type||"circle");
-    nodeTypes[type].update(nodeTypes[type].selection);
+  for(let name in simDef.relations){
+    let relDef=simDef.relations[name];
+    let data=view.relations[name];
+    graph.links=graph.links.concat(data);
+    let svgs=relDef.svg;
+    if(!svgs)continue;
+    for(let type in svgs){
+      svgs[type].selection=svgs[type].selection.data(data).join(svgs[type].type||"line");
+      svgs[type].update(svgs[type].selection);
+    }
   }
+  console.log(graph);
 
+  simulation.nodes(graph.nodes);
+  forceLink.links(graph.links);
 
   simulation.restart();
 }
 
 
-function initState(data){
+function updateState(data){
   console.log(data)
 
   //dims:qudit dims,parties:parties(currently one qudit per party),state:state vector
-  let n=data.dims.length;
-  let parties=n;
   stateData=data;
+  let state=data;
+
   //test: show possible outcomes amplitudes along with their phase
-  //meaning: for qubits, 0 is a dark circle or a dot at the center, 1 is a bright circle (or has an empty center to represent higher energy), for larger dimensions there can be more concentric circles and a larger outline for teh node. opacity and/or brightness or contrast is amplitude (alternatively probability/time length of the outcome is amplitude), color hue is phase (1 being red? i being yellow?), and maybe we can combine different possibilities in one oicture? liek say drawing all possibilities but at slightly different offsets from teh main nodes? in circles? in fractal patterns?
-  possibleStates=[];
-  function getQuditValues(index,dims){
-    let result=[];
-    for(let d of dims){
+  //meaning: for qubits, 0 is a dark circle or a dot at the center, 1 is a bright circle (or has an empty center to represent higher energy), for larger dimensions there can be more concentric circles and a larger outline for teh node. opacity and/or brightness or contrast is amplitude (alternatively probability/time length of the outcome is amplitude), color hue is phase (1 being red? i being yellow?), and maybe we can combine different possibilities in one picture? liek say drawing all possibilities but at slightly different offsets from teh main nodes? in circles? in fractal patterns?
+  //note: this func should prepare all data objects, including possibilities, which are currently nearly the same as view/graph objects, but in teh future there may be more differences
 
-      result.unshift(index%d);
-      index=Math.floor(index/d);
-    }
-    return result;
-  }
-  for(let [i,x] of data.state.entries()){
-    let values=getQuditValues(i,data.dims);
-    let prob=Math.sqrt(x.re*x.re+x.im*x.im);
-    if(prob==0)continue;
-    let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
-    possibleStates.push(obj);
-  }
-  function complex2str(x){
-    let re=x.re.toString().substring(0,5),im=x.im.toString().substring(0,5);
-    if(x.re!=0)
-    {
-      if(x.im!=0){return ""+re+"+"+im+"i";}
-      else {return ""+re;}
-    }
-    else{
-      if(x.im!=0){return im+"i";}
-      else {return "0";}
-    }
-  }
-  setTimeout(()=>{
-    let text="";//data.name+" ";
-    for(let [i,state] of possibleStates.entries()){
-      text+=((i>0)?"+":"")+complex2str(state.amplitude)+"|"+state.values.join("")+"> ";
-    }
-    titleText.text(text);
-  },10);
+  let view={objects:{},relations:{}};
+  viewObj=view;
+  console.log(viewObj);
+  for(let name in simDef.objects){
+    let objDef=simDef.objects[name];
+    let dataFunc=objDef.data;
+    let data=dataFunc(state);
+    for(let d of data){d.objType=name;}
+    view.objects[name]=data;
 
-  if(data.steps){maxtimestep=data.steps;}
-  else{maxtimestep=possibleStates*100;}
-  timestep=0;time=0;
-  let graph={nodes:[],links:[]};
-  for(let i=0;i<n;i++){graph.nodes.push( {id:i,dim:data.dims[i],index:i,party:i})}
-  for(let key in data.e_stats){
-    let st=key.split(",").map((x)=>parseInt(x.trim()));
-    let value=data.e_stats[key];
-    graph.links.push({source:graph.nodes[st[0]],target:graph.nodes[st[1]],max:value.max,min:value.min});
   }
-  /*for(let i=0;i<n;i++){
-    for(let j=0;j<i;j++){
-      graph.links.push({source:i,target:j});
+  for(let name in simDef.relations){
+    let relDef=simDef.relations[name];
+    let dataFunc=relDef.data;
+    let sourceName=relDef.source;
+    let targetName=relDef.target||relDef.source;
+    let sources=view.objects[sourceName],targets=view.objects[targetName];
+    let data=dataFunc(state,sources,targets);
+
+    for(let d of data){
+      d.relType=name;
+      if(typeof d.source != "object")d.source=sources[d.source];
+      if(typeof d.target != "object")d.target=targets[d.target];
     }
-  }*/
-  setData(graph);
+    view.relations[name]=data;
+
+  }
+
+
+  updateView(view);
 
 }
+initSimulation();
+d3.json("state.json").then(updateState);
 
-d3.json("state.json").then(initState);
 
+
+
+function getQuditValues(index,dims){
+  let result=[];
+  for(let d of dims){
+
+    result.unshift(index%d);
+    index=Math.floor(index/d);
+  }
+  return result;
+}
+
+function getSimilarity(values1,values2){
+  let a=0;
+  for(let i=0;i<values1.length;i++){
+    if(values1[i]==values2[i]){a++;}
+  }
+  return a/values1.length;
+}
+function complex2str(x){
+  let re=x.re.toString().substring(0,5),im=x.im.toString().substring(0,5);
+  if(x.re!=0)
+  {
+    if(x.im!=0){return ""+re+"+"+im+"i";}
+    else {return ""+re;}
+  }
+  else{
+    if(x.im!=0){return im+"i";}
+    else {return "0";}
+  }
+}
 
 </script>
 
 </head>
 
 <body>
-
-
 
 
 </body>
