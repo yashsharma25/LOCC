@@ -1,12 +1,5 @@
-import qiskit
-from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector
 import numpy as np
 from qiskit.quantum_info import shannon_entropy
-from scipy.linalg.misc import norm
-from scipy.stats import unitary_group
-
-
 
 class k_party:
     '''
@@ -82,7 +75,7 @@ class k_party:
 
     #will return density matrix of the k-party state
     def get_density_matrix(self):
-        return
+        return np.outer(self.q_state.data, self.q_state.data.conj())
 
     #will return statevector of the k-party state
     def get_statevector(self):
@@ -135,6 +128,19 @@ class k_party:
 
         return all_possible_posteriors
 
+    '''
+    A is an array consisting of the parties on one side
+    B is an array consisting of the parties on the other side
+    Example: For a 5-partite state, if we want to compute entanglement between systems 0,3,4 and 1,2
+    A = [0,3,4] 
+    B = [1,2]
+    '''
+    def bipartite_entropy(self, A, B):
+        q_state_tensor = self.q_state.data.reshape([self.dims] * self.k)
+        q_state_tensor = np.transpose(q_state_tensor, tuple(A+B))
+        q_state_tensor = np.reshape(q_state_tensor, (self.dims ** len(A), self.dims ** len(B)))
+        return self.entanglement_entropy_for_state(q_state_tensor)
+
     def entanglement_entropy(self):
         return self.E.entropy_using_singular_values(self.q_state)
 
@@ -148,30 +154,3 @@ class k_party:
         entanglement_entropy = shannon_entropy(squared_singular_vals, base=2)
 
         return entanglement_entropy
-
-# What if even after measurement the state is still in superposition?
-# In a 4-party state, when we measure the 4th party, the other 3 parties are still in superposition
-
-
-# In a 3-party state, we measue the 3rd party, the other 2 parties are still in superposition
-# Yes, thats True
-# What do we do after that?
-# We take each of the state in the superposition and compute the entanglement entropy for that
-# Is that exactly what we do?
-# Yes
-
-# REMEMBER THAT ENTANGLEMENT ENTROPY CAN ONLY BE COMPUTED FOR A BIPARTITE STATE
-
-# But then with n qubits, how do we create a bipartite state
-# Just divide the n qubits into two parties
-
-# So in case of the GHZ state, how is the division taking place
-
-# When we measure the third party, we divide party A and B as one side
-# And party C is on the other side
-
-# When is the EE 0?
-# When the states are separable
-# The two parties are separable
-# There is a difference between measurement and tracing out
-# Always remember that
