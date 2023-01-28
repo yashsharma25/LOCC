@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import combinations
 from qiskit.quantum_info import random_statevector
+import networkx as nx
 from k_party import k_party
 
 class multiparty_solver:
@@ -29,7 +30,6 @@ class multiparty_solver:
             
             intervals.append(partition)
 
-        print("len(intervals) =", len(intervals))
         #there are twice as many intervals generated because in the second half, just the order is flipped
         list_half = round(len(intervals)/2)
         intervals = intervals[:list_half]
@@ -43,17 +43,16 @@ class multiparty_solver:
 
 
     def create_circular_graph(self):
-        edges = []
+        G = nx.complete_graph(self.N)
         edge_ids = {}
         id = 0
-        for v in range(self.N):
-            edges.append((v, (v+1) % self.N))
-            edge_ids[(v, (v+1) % self.N)] = id
-            edge_ids[((v+1) % self.N, v)] = id
+        for e in G.edges():
+            edge_ids[(e[0], e[1])] = id
+            edge_ids[(e[1], e[0])] = id
             id += 1
 
-        print(edge_ids)
-        return edges, edge_ids
+        #print(edge_ids)
+        return G.edges(), edge_ids
 
     def compute_entropies_for_intervals(self, k_party_obj, edges, edge_ids, intervals):
         mat = np.zeros((len(intervals), len(intervals)))
