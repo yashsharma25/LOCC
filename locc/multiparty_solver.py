@@ -77,8 +77,8 @@ class multiparty_solver:
         p, res, rank, s = np.linalg.lstsq(mat, entropy_matrix)
         print(p)
 
-ms = multiparty_solver(4)
+ms = multiparty_solver(10)
 intervals = ms.get_intervals()
 edges, edge_ids = ms.create_circular_graph()
-k_party_obj = k_party(4, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2])], random_statevector(16))
+k_party_obj = k_party(10, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]),  (1, [2]), (1, [2])], random_statevector(2**10))
 ms.compute_entropies_for_intervals(k_party_obj, edges, edge_ids, intervals)
