@@ -14,22 +14,25 @@ class multiparty_solver:
             #check if partition is valid
             is_valid = True
 
-            for node in partition[0]:
-                if len(partition[0]) > 1:
-                    if (node+1 not in partition[0]) and (node-1 not in partition[0]):
-                        is_valid = False
+            # for node in partition[0]:
+            #     if len(partition[0]) > 1:
+            #         if (node+1 not in partition[0]) and (node-1 not in partition[0]):
+            #             is_valid = False
             
-            if is_valid:
-                for node in partition[1]:
-                    if len(partition[1]) > 1:
-                        if (node+1 not in partition[1]) and (node-1 not in partition[1]):
-                            is_valid = False
+            # if is_valid:
+            #     for node in partition[1]:
+            #         if len(partition[1]) > 1:
+            #             if (node+1 not in partition[1]) and (node-1 not in partition[1]):
+            #                 is_valid = False
 
 
-            if is_valid:
-                intervals.append(partition)
+            
+            intervals.append(partition)
 
-        print(intervals)
+        print("len(intervals) =", len(intervals))
+        #there are twice as many intervals generated because in the second half, just the order is flipped
+        list_half = round(len(intervals)/2)
+        intervals = intervals[:list_half]
         return intervals
 
     def bipartitions(self):
@@ -76,6 +79,7 @@ class multiparty_solver:
 
         p, res, rank, s = np.linalg.lstsq(mat, entropy_matrix)
         print(p)
+        
 
 ms = multiparty_solver(10)
 intervals = ms.get_intervals()
