@@ -1,12 +1,22 @@
 class locc_controller:
+
     '''
-    A protocol is an array of locc_operation objects
+    Args:
+
+    protocol: An array of locc_operation objects
+
+    k_party_obj: an object of class k_party
+
     '''
 
     def __init__(self, protocol, k_party_obj):
         self.protocol = protocol
         self.k_party_obj = k_party_obj
 
+    '''
+    Executes the protocol by checking the type of each locc_operation and applying it one by one in a loop
+    (Might be possible to parallelise the loop in the future)
+    '''
     def execute_protocol(self):
         for locc_op in self.protocol:
             #get the qudit index within the statevector

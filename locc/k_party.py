@@ -52,6 +52,10 @@ class k_party:
 
         return total_qudits
 
+    
+    '''
+    Returns the index of a specific qudit held by a party in the statevector
+    '''
     def get_qudit_index_in_state(self, party_index, qudit_index_within_party):
         qudits_before = 0
         for index, s in enumerate(self.state_desc):
@@ -62,6 +66,7 @@ class k_party:
                 break
 
         return qudits_before + qudit_index_within_party
+    
     '''
     Input: party index
     Output: An index range of the qudits the specified party holds
