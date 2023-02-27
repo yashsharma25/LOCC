@@ -13,16 +13,19 @@ class k_party:
     Example:[(2, [3, 3]), (4, [2,2,2,2]), (1, [2])]
 
     Here party A has 2 qutrits, party B has 4 qubits, party C has 1 qubit
+
     '''
 
     #qState can be a statevector, densityMatrix, quantumCircuit or graph state. All 4 descriptions will be supported
-    def __init__(self, k, dims, state_desc, q_state):
+    def __init__(self, k, dims, state_desc, q_state, party_names = None):
         #all the qudits will be intialised as |0>
         self.k = k
         self.dims = dims
         self.parties = k
         self.state_desc = state_desc
         self.q_state = q_state
+        self.party_names = party_names
+        self.measurement_result = {}
 
     #get the Hilbert space dimension of single qudit of the k-party state
     def state_dim(self):
@@ -49,6 +52,16 @@ class k_party:
 
         return total_qudits
 
+    def get_qudit_index_in_state(self, party_index, qudit_index_within_party):
+        qudits_before = 0
+        for index, s in enumerate(self.state_desc):
+            if index != party_index:
+                qudits_before += s[0]
+
+            else:
+                break
+
+        return qudits_before + qudit_index_within_party
     '''
     Input: party index
     Output: An index range of the qudits the specified party holds

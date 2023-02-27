@@ -1,0 +1,29 @@
+class locc_controller:
+    '''
+    A protocol is an array of locc_operation objects
+    '''
+
+    def __init__(self, protocol, k_party_obj):
+        self.protocol = protocol
+        self.k_party_obj = k_party_obj
+
+    def execute_protocol(self):
+        for locc_op in self.protocol:
+            #get the qudit index within the statevector
+            qudit_index = self.k_party_obj.get_qudit_index_in_state(locc_op.party_index, locc_op.qudit_index)
+
+            #just apply the local operator
+            if locc_op.operation_type == "default":
+                self.k_party_obj.q_state.evolve(locc_op.operator, qudit_index)
+
+            elif locc_op.operation_type == "conditional_operation":
+                #retrieve the measurement result and evaluate the condition
+                if self.k_party_obj.measurement_result[(locc_op.condition[0], locc_op.condition[1])] == locc_op.condition[2]:
+                    self.k_party_obj.q_state.evolve(locc_op.operator, qudit_index)
+
+            elif locc_op.operation_type == "measurement":
+                #perform measurement
+                outcome, self.k_party_obj.q_state = self.k_party_obj.q_state.measure([qudit_index])
+
+                #save the measurement outcome which will be used in the next conditional operation
+                self.k_party_obj.measurement_result[(locc_op.party_index, qudit_index)] = outcome
