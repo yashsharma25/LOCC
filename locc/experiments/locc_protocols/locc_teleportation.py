@@ -1,9 +1,9 @@
 from qiskit.circuit.gate import Gate
-from . import locc_controller
-from . import locc_operation
+from .. import locc_controller
+from .. import locc_operation
 from qiskit.quantum_info import Statevector, random_statevector
 import numpy as np
-from . import k_party
+from .. import k_party
 from sympy.physics.quantum.gate import H, X, Z
 
 def teleportation(k_party_obj):
