@@ -1,5 +1,6 @@
-class locc_controller:
+from qiskit.quantum_info.operators import Operator
 
+class locc_controller:
     '''
     Args:
 
@@ -24,16 +25,22 @@ class locc_controller:
 
             #just apply the local operator
             if locc_op.operation_type == "default":
-                self.k_party_obj.q_state.evolve(locc_op.operator, qudit_index)
+                self.k_party_obj.q_state.evolve(Operator(locc_op.operator), [qudit_index])
 
             elif locc_op.operation_type == "conditional_operation":
-                #retrieve the measurement result and evaluate the condition
-                if self.k_party_obj.measurement_result[(locc_op.condition[0], locc_op.condition[1])] == locc_op.condition[2]:
-                    self.k_party_obj.q_state.evolve(locc_op.operator, qudit_index)
+                #retrieve the measurement result and evaluate the 
+                print("Stored Measurement outcome for ", locc_op.condition[0], locc_op.condition[1], " = ", self.k_party_obj.measurement_result.get((locc_op.condition[0], locc_op.condition[1])))
+                if self.k_party_obj.measurement_result.get((locc_op.condition[0], locc_op.condition[1])) == locc_op.condition[2]:
+                    print("Applying operator = ", locc_op.operator)
+                    self.k_party_obj.q_state.evolve(Operator(locc_op.operator), [qudit_index])
 
-            elif locc_op.operation_type == "measurement":
+            elif locc_op.operation_type == "measure":
                 #perform measurement
                 outcome, self.k_party_obj.q_state = self.k_party_obj.q_state.measure([qudit_index])
+                print("Outcome is ", outcome)
 
                 #save the measurement outcome which will be used in the next conditional operation
                 self.k_party_obj.measurement_result[(locc_op.party_index, qudit_index)] = outcome
+
+        print("After protocol run")
+        print(self.k_party_obj.q_state)
