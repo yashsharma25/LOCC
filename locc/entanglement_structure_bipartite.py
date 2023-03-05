@@ -13,9 +13,10 @@ class multiparty_solver:
     def get_intervals(self):
         intervals = []
         
-        #except the cut vertices all other nodes should have both their neighbours in the same partition
         for partition in ms.bipartitions():
             #check if partition is valid i.e if the interval is contigous
+            #except the two cut vertices all other nodes should have both their neighbours in the same partition
+
             is_valid = True
 
             cut_vertices = 0
@@ -34,7 +35,6 @@ class multiparty_solver:
                         neighbor_1 = 0
 
                     if (neighbor_1 not in partition[0]) or (neighbor_2 not in partition[0]):
-                        #its okay if this is a cut
                         cut_vertices += 1
 
                         if cut_vertices > 2:
@@ -131,10 +131,10 @@ class multiparty_solver:
         #     print(e, edge_weights_maps[e])
         return weights
         
+if __name__ == "__main__":
+    ms = multiparty_solver(10)
+    intervals = ms.get_intervals()
+    edges, edge_ids = ms.create_complete_graph()
+    k_party_obj = k_party(10, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]),  (1, [2]), (1, [2])], random_statevector(2**10))
 
-ms = multiparty_solver(10)
-intervals = ms.get_intervals()
-edges, edge_ids = ms.create_complete_graph()
-k_party_obj = k_party(10, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2]),  (1, [2]), (1, [2])], random_statevector(2**10))
-
-ms.compute_entropies_for_intervals(k_party_obj, edges, edge_ids, intervals)
+    ms.compute_entropies_for_intervals(k_party_obj, edges, edge_ids, intervals)
