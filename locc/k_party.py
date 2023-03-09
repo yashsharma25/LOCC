@@ -3,16 +3,19 @@ from qiskit.quantum_info import shannon_entropy
 
 class k_party:
     '''
-    k is the number of parties
+   
+
+    
+  
+    Args:
+    k = the number of parties
 
     state_desc is an array of 2-tuples where first entry is no. of qudits each party has
-    and second entry is the dimension of each qudit
+    and second entry is the dimension of each qudit. Size of array state_desc = k
     
-    Size of array state_desc = k
+    Example:[(2, [3, 3]), (4, [2,2,2,2]), (1, [2])]. Here party A has 2 qutrits, party B has 4 qubits, party C has 1 qubit
 
-    Example:[(2, [3, 3]), (4, [2,2,2,2]), (1, [2])]
-
-    Here party A has 2 qutrits, party B has 4 qubits, party C has 1 qubit
+    measurement_result has a 2-tuple as key of the form (party_index, qudit_index) and the value is the measurement outcome
 
     '''
 
@@ -133,7 +136,7 @@ class k_party:
     def lc_equivalence(self, other_k_party_state):
         return False
     
-    def measure_all_possible_posteriors_qiskit(self, qubit_to_measure):
+    def measure_all_possibilities(self, qubit_to_measure = None):
         outcomes = []
         all_possible_posteriors = []
 
