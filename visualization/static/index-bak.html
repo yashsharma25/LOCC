@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quantum entanglement visualization</title>
+
+<script type="text/javascript" src="d3.js"></script>
+
+<script type="module">
+//d3.js
+//https://cdn.jsdelivr.net/npm/d3@7
+
+let width=1024,height=768;
+let stateData;let possibleStates=[];
+
+let forceNode = d3.forceManyBody().strength(-400);
+let forceLink = d3.forceLink([]).id((x) => x.id).distance(500);
+
+let simulation = d3.forceSimulation()
+    .alphaTarget(0.2)
+    .force("link", forceLink)
+    .force("charge", forceNode)
+    .force("center",  d3.forceCenter())
+    .on("tick", tick);
+
+d3.select("body").attr("width", "100%").attr("height", "100%").attr("position", "absolute");
+let svgContainer=d3.select("body").append("div").style("width", "100%").style("height", "100%").attr("position", "absolute");
+let svg =svgContainer.append("svg")
+.attr("position", "absolute")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .attr("style", "max-height: 100%; width: auto; height: intrinsic;")
+        .attr("preserveAspectRatio","xMidYMid meet");
+let svgDefs = svg.append('defs');
+/*
+let cloudDef=svgDefs.append("g").attr("id","cloud").style("opacity", 0.5);
+
+		cloudDef.selectAll("circle").data(circle_data).enter()
+			.append("circle")
+			.attr("cx", function(d){return d[0]})
+		  	.attr("cy", function(d){return d[1]})
+		  	.attr("r", function(d){return d[2]})
+		  	.style("fill", "steelblue")
+
+		svg.append("g").attr("transform","translate(0,0)").attr("class","cloud")
+		   .append("use").attr("xlink:href","#cloud")
+
+		svg.append("g").attr("transform","translate(100,0)").attr("class","cloud")
+		   .append("use").attr("xlink:href","#cloud")
+
+		svg.append("g").attr("transform","translate(200,0)").attr("class","cloud")
+		   .append("use").attr("xlink:href","#cloud")
+
+		setInterval( function(){
+		  d3.selectAll("g.cloud").transition()
+		    .attr("transform", function(){
+		    	return "translate(" + Math.random() * 200 + ", 0)"
+		    })
+		}, 1000)
+
+*/
+
+let ffluxGradient=svgDefs.append("linearGradient").attr("gradientTransform","rotate(226, 0.5, 0.5)")
+                        .attr("x1","50%").attr("y1","0%").attr("x2","50%").attr("y2","100%").attr("id","ffflux-gradient");
+
+ffluxGradient.append("stop").attr("stop-color","hsl(179, 100%, 72%)").attr("stop-opacity","1").attr("offset","0%");
+ffluxGradient.append("stop").attr("stop-color","hsl(227, 100%, 50%)").attr("stop-opacity","1").attr("offset","100%");
+
+let ffluxFilter=svgDefs.append("filter").attr("x","-20%").attr("y","-20%").attr("filterUnits","objectBoundingBox")
+                                    .attr("primitiveUnits","userSpaceOnUse").attr("color-interpolation-filters","sRGB");
+ffluxFilter.append("feTurbulence").attr("type","fractalNoise").attr("baseFrequency","0.006 0.004").attr("numOctaves","1")  .attr("seed","2").attr("stitchTiles","stitch").attr("x","0%").attr("y","0%").attr("width","100%")
+.attr("height","100%");
+ffluxFilter.append("feGaussianBlur").attr("stdDeviation","13 80").attr("in","turbulence").attr("edgeMode","duplicate")  .attr("result","blur").attr("x","0%").attr("y","0%").attr("width","100%").attr("height","100%");
+ffluxFilter.append("feBlend").attr("mode","hard-light").attr("in","SourceGraphic").attr("in2","blur")  .attr("result","blend").attr("x","0%").attr("y","0%").attr("width","100%").attr("height","100%");
+
+let backgroundRect=svg.append("rect").attr("width","100%").attr("height","100%").attr("x","-50%").attr("y","-50%").attr("fill","url(#ffflux-gradient)").attr("filter","url(#ffflux-filter)");
+
+let titleBar = d3.select("body").append("div").style("position","absolute").style("top","0").style("width","100%")
+.style("text-align","right").style("color","white");
+let titleText=titleBar.append("p");titleText.style("font-size","30px")
+
+
+
+let nodeRadius=20;
+let linkWidth=48;
+let linkAnimPeriod=2000,minPeriod=1000,addedPeriod=1000;
+let timestep=0,time=0,maxtimestep=100;
+
+let nodeTypes={
+  node:{
+    type:"circle",
+    init:(g)=>{
+      g.attr("stroke-width", 3)
+      .style('stroke', '#def')
+      .style('fill', 'none')
+      ;
+    },
+    update:(selection)=>{
+          selection
+          .attr("r", (d)=>(d.dim?Math.log2(d.dim):1)*nodeRadius)
+          .call(drag(simulation));
+          ;
+    },
+    tick:(selection)=>{
+      selection
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+    }
+  },
+  outcome:{
+    type:"circle",
+    init:(g)=>{
+      g.attr("stroke-width", 2);
+    },
+    update:(selection)=>{
+          selection
+          .attr("r", (d)=>{
+            let result=possibleStates[0].values[d.id];
+            if(result==0) return nodeRadius/2-2;
+            else return Math.log2(result)*nodeRadius })
+          //.call(drag(simulation));
+          ;
+          //let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
+
+    },
+    tick:(selection)=>{
+      selection
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", (d)=>{
+          let stateid=Math.min(Math.floor(Math.abs(timestep-1)/100),possibleStates.length-1);
+          let result=possibleStates[stateid].values[d.id];
+          if(result==0) return nodeRadius/2-2;
+          else return (Math.log2(result)+1)*nodeRadius })
+        //.call(drag(simulation));
+        ;
+    }
+  },
+  label:{
+    type:"text",
+    init:(g)=>{
+      g.text(function(d) {
+        return d&&d.id;
+      })
+      //.style('stroke', '#fff')
+      .style('fill', '#fff')
+      .style('font-size', '16px')
+      .attr('x', 6)
+      .attr('y', 3);
+    },
+    update:(selection)=>{
+      selection.text(function(d) {
+        return d.id;
+      });
+
+    },
+    tick:(selection)=>{
+      selection
+        .attr("x", d => d.x-3)
+        .attr("y", d => d.y+3);
+    }
+  }
+}
+let linkTypes={
+  outline:{
+    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#eee")},
+    update:(selection)=>{selection.attr("stroke-width",(d)=>1.05*linkWidth)}
+  },
+  max:{
+    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#adf")},
+    update:(selection)=>{
+      if(stateData){
+        if(stateData.is_changing){
+          selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)
+        }
+        else {
+          selection.attr("stroke-width",(d)=>d.max*linkWidth)
+        }
+      }
+    },
+
+    tick:(selection)=>{
+      if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.max[timestep]*linkWidth)}
+    }
+  },
+  min:{
+    init:(g)=>{g.attr("stroke-opacity", 0.9).attr("stroke", "#35a")},
+    update:(selection)=>{
+      selection.attr("stroke-width",(d)=>{(stateData.is_changing)?(d.min[timestep]*linkWidth):(d.min*linkWidth)});
+      if(stateData&&(!stateData.is_changing)){
+          //variant: synchronized animation with the same period for all
+          /*
+          function repeat() {
+            selection></
+            .attr("stroke-width",(d)=>d.min*linkWidth)
+            .transition()
+            .duration(linkAnimPeriod)
+            .attr("stroke-width",(d)=>d.max*linkWidth)
+            .transition()
+            .duration(linkAnimPeriod)
+            .attr("stroke-width",(d)=>d.min*linkWidth)
+            .on("end", repeat);
+          }
+          repeat();
+          */
+
+          //variant: each edge has its own period and offset, which are random
+
+          selection.each(function my(d,i){
+            let that=this;//need to be a named function to have this??
+            let period=minPeriod+addedPeriod*Math.random(),offset=period*Math.random();
+            function repeat() {
+
+              d3.select(that)
+              //.selectAll(".line")
+              .attr("stroke-width",(d)=>d.min*linkWidth)
+              .transition()
+              .duration(period)
+              .attr("stroke-width",(d)=>d.max*linkWidth)
+              .transition()
+              .duration(period)
+              .attr("stroke-width",(d)=>d.min*linkWidth)
+              .on("end", repeat);
+            }
+            setTimeout(repeat,offset);
+          });
+
+
+      }
+    },
+    tick:(selection)=>{
+      if(stateData&&stateData.is_changing){selection.attr("stroke-width",(d)=>d.min[timestep]*linkWidth)}
+    }
+  }
+
+}
+
+
+
+for(let type in linkTypes){
+  let g=svg.append("g")
+      .attr("stroke-width",1)
+      .attr("stroke", "#999")
+      .attr("stroke-opacity", 0.6)
+      .attr("stroke-linecap", "round");
+
+    linkTypes[type].selection=g.selectAll("line");
+    if(linkTypes[type].init){
+      linkTypes[type].init(g);
+    }
+
+}
+
+for(let type in nodeTypes){
+  console.log(type);
+  let elemType=nodeTypes[type].type;
+  let g=svg.append("g");
+
+
+    nodeTypes[type].selection=g.selectAll(elemType);
+    if(nodeTypes[type].init){
+      nodeTypes[type].init(g);
+    }
+
+}
+
+
+
+function tick() {
+  for(let type in linkTypes){
+    linkTypes[type].selection
+    .attr("x1", d => d.source.x)
+    .attr("y1", d => d.source.y)
+    .attr("x2", d => d.target.x)
+    .attr("y2", d => d.target.y);
+
+    if(linkTypes[type].tick){
+      linkTypes[type].tick(linkTypes[type].selection);
+    }
+
+
+  }
+  for(let type in nodeTypes){
+    if(nodeTypes[type].tick){
+      nodeTypes[type].tick(nodeTypes[type].selection);
+    }
+  }
+
+
+  time+=0.087;if(time>=maxtimestep){time=-maxtimestep+0.01;}
+  timestep=Math.floor(Math.abs(time));
+
+}
+function drag(simulation) {
+  function dragstarted(event) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+
+  function dragended(event) {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+
+  return d3.drag()
+    .on("start", dragstarted)
+    .on("drag", dragged)
+    .on("end", dragended);
+}
+
+function setData(data){
+  console.log(data);
+
+
+  simulation.nodes(data.nodes);
+  forceLink.links(data.links);
+  for(let type in linkTypes){
+    linkTypes[type].selection=linkTypes[type].selection.data(data.links).join(linkTypes[type].type||"line");
+    linkTypes[type].update(linkTypes[type].selection);
+  }
+  for(let type in nodeTypes){
+    nodeTypes[type].selection=nodeTypes[type].selection
+      .data(data.nodes,function(d){return d.id;}).join(nodeTypes[type].type||"circle");
+    nodeTypes[type].update(nodeTypes[type].selection);
+  }
+
+
+  simulation.restart();
+}
+
+
+function initState(data){
+  console.log(data)
+
+  //dims:qudit dims,parties:parties(currently one qudit per party),state:state vector
+  let n=data.dims.length;
+  let parties=n;
+  stateData=data;
+  //test: show possible outcomes amplitudes along with their phase
+  //meaning: for qubits, 0 is a dark circle or a dot at the center, 1 is a bright circle (or has an empty center to represent higher energy), for larger dimensions there can be more concentric circles and a larger outline for teh node. opacity and/or brightness or contrast is amplitude (alternatively probability/time length of the outcome is amplitude), color hue is phase (1 being red? i being yellow?), and maybe we can combine different possibilities in one oicture? liek say drawing all possibilities but at slightly different offsets from teh main nodes? in circles? in fractal patterns?
+  possibleStates=[];
+  function getQuditValues(index,dims){
+    let result=[];
+    for(let d of dims){
+
+      result.unshift(index%d);
+      index=Math.floor(index/d);
+    }
+    return result;
+  }
+  for(let [i,x] of data.state.entries()){
+    let values=getQuditValues(i,data.dims);
+    let prob=Math.sqrt(x.re*x.re+x.im*x.im);
+    if(prob==0)continue;
+    let obj={prob:prob,values:values,amplitude:x,phase:Math.atan(x.im/x.re)}
+    possibleStates.push(obj);
+  }
+  function complex2str(x){
+    let re=x.re.toString().substring(0,5),im=x.im.toString().substring(0,5);
+    if(x.re!=0)
+    {
+      if(x.im!=0){return ""+re+"+"+im+"i";}
+      else {return ""+re;}
+    }
+    else{
+      if(x.im!=0){return im+"i";}
+      else {return "0";}
+    }
+  }
+  setTimeout(()=>{
+    let text="";//data.name+" ";
+    for(let [i,state] of possibleStates.entries()){
+      text+=((i>0)?"+":"")+'<span style="'+"color:"+d3.hsl(state.phase/2*Math.PI,1,0.7-state.prob*0.2).formatHsl() +'">'+complex2str(state.amplitude)+"</span> <b>|"+state.values.join("")+"\u3009</b> ";
+    }
+    titleText.html(text);
+  },10);
+
+  if(data.steps){maxtimestep=data.steps;}
+  else{maxtimestep=possibleStates*100;}
+  timestep=0;time=0;
+  let graph={nodes:[],links:[]};
+  for(let i=0;i<n;i++){graph.nodes.push( {id:i,dim:data.dims[i],index:i,party:i})}
+  for(let key in data.e_stats){
+    let st=key.split(",").map((x)=>parseInt(x.trim()));
+    let value=data.e_stats[key];
+    graph.links.push({source:graph.nodes[st[0]],target:graph.nodes[st[1]],max:value.max,min:value.min});
+  }
+  /*for(let i=0;i<n;i++){
+    for(let j=0;j<i;j++){
+      graph.links.push({source:i,target:j});
+    }
+  }*/
+  setData(graph);
+
+}
+
+d3.json("state.json").then(initState);
+
+
+</script>
+
+</head>
+
+<body>
+
+
+</body>
+
+
+</html>

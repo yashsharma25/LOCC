@@ -1,0 +1,9 @@
+
+.panel {
+  position:absolute;
+  box-sizing:border-box;
+  padding:5px;
+  border:2px solid #dee;
+  background-color:rgba(200,212,230,0.5);
+  z-index:
+}
