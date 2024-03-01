@@ -90,9 +90,9 @@ em = EntanglementMeasures(2, GHZ_5(2), 4)
 k_party_obj = k_party(5, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_5(2))
 
 def bipartite_entropy_check():
-    q_state_np = k_party_obj.q_state.data.reshape(2,2,2,2,2)
+    q_state_np = k_party_obj.q_state.data.reshape(2,2,2,2,2) # 5 state quantum system - 2 for the 2 dimensionality of qubits
     print("Shape before = ", q_state_np.shape)
-    reshape_tuple = (1,4,0,2,3)
+    reshape_tuple = (1,4,0,2,3) # group 1,2 and 3,4,5 into two groups
     q_state_np = np.transpose(q_state_np, reshape_tuple)
     q_state_np = np.reshape(q_state_np, (4,8))
 

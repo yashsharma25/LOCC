@@ -2,6 +2,7 @@
 
 import numpy as np
 from qiskit.quantum_info import Statevector
+from k_party import k_party
 
 #from locc.utils import get_density_matrix, partial_trace, majorisation
 
