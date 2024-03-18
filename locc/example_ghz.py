@@ -162,10 +162,19 @@ class NodeGraphScene(ThreeDScene):
                 edge_indices.append((i,j)) # append edge as tuple
                 edges.append(Line(node_dots[i].get_center(), node_dots[j].get_center()))
         
+        # create VGroups
+        sphere_group = VGroup(*nodes)
+        node_group = VGroup(*node_dots)
+        edge_group = VGroup(*edges)
+
+         # Display the grouped objects in the scene using self.play()
+        self.play(Create(sphere_group), Create(node_group), Create(edge_group))
+        '''
         # Add nodes and edges to the scene
         self.play(*[Create(node) for node in nodes])
         self.play(*[Create(dot) for dot in node_dots])
         self.play(*[Create(edge) for edge in edges])
+        '''
 
         # move camera
         self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
@@ -282,12 +291,132 @@ class NodeGraphScene(ThreeDScene):
                 self.play(*[Create(edge) for edge in edges])
                 
                 edge_index += 1
-'''
-                if j == 2:
-                    break
-            if i == 1:
-                break
-'''
+
+# NEXT STEP: CLEAN UP
+class QuantumMeasurement(ThreeDScene):
+    def construct(self):
+        # text main
+        my_text = Text("Modeling Quantum Measurement")
+        my_text.to_edge(UP)
+        self.play(Create(my_text))
+        self.wait(2)
+        self.play(Uncreate(my_text))
+
+        self.set_camera_orientation(phi=65 * DEGREES, theta=45* DEGREES)
+
+        # Create a sphere in 3D space
+        sphere = Sphere(radius=1)
+        self.play(Create(sphere))
+        self.wait(1)
+
+        self.move_camera(phi=90 * DEGREES, theta=0 * DEGREES)
+
+        # Zoom in on the sphere
+        self.begin_ambient_camera_rotation(rate=0.5)
+        self.wait(5)  # Wait for a moment before zooming in for visual clarity
+
+        # Stop camera rotation
+        self.stop_ambient_camera_rotation()
+
+        # Define the equation as a Text object
+        equation = MathTex(
+            r"\mathbf{|} \mathbf{\psi} \mathbf{\rangle} = \alpha \mathbf{|} \mathbf{0} \mathbf{\rangle} + \beta \mathbf{|} \mathbf{1} \mathbf{\rangle}",
+            tex_to_color_map={"| \psi \rangle": YELLOW, "|0\rangle": BLUE, "|1\rangle": RED},
+        ).scale(0.8)
+
+        # Position the equation to the right of the rotating sphere
+        equation.shift(RIGHT*4)  # Adjust the shift as needed
+
+        # Add "Superposition:" text
+        superposition_text = Text("Superposition:")
+        superposition_text.next_to(equation, UP, buff=0.5)
+
+        self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
+
+        # Display the equation and "Superposition:" text in the scene
+        # self.add(superposition_text, equation)
+        self.play(Create(superposition_text))
+        self.play(Create(equation))
+
+        # Rotate the sphere to align with the equation
+        self.play(Rotate(sphere, angle=PI/2, axis=RIGHT))
+
+        # Add the sphere after rotation
+        self.add(sphere)
+
+        # Wait for a few seconds
+        self.wait(3)
+
+        # Create a square
+        square = Square(side_length=2, color=BLUE)
+
+        # Create the letter 'M'
+        letter_m = Text("M", font_size=48, color=WHITE)
+
+        # Position the letter 'M' at the center of the square
+        letter_m.move_to(square)
+
+        # Create a VGroup to combine the square and the letter 'M'
+        square_with_m = VGroup(square, letter_m)
+        
+        square_with_m.to_edge(LEFT)
+
+        measurement_text = Text("Measurement", font_size=30)
+        measurement_text.next_to(square_with_m, UP, buff=0.5)
+
+        matrix_text = Text("Matrix", font_size=30)
+        matrix_text.next_to(square_with_m, DOWN, buff=0.5)
+    
+        measurement_matrix_text = VGroup(measurement_text, matrix_text)
+        
+        # Display the square and the letter 'M'
+        self.play(Create(measurement_matrix_text))
+        self.play(Create(square_with_m))
+        self.add(measurement_text, matrix_text, square_with_m)
+        self.wait(1)
+        self.play(Uncreate(measurement_matrix_text))
+        
+        self.play(Create(square_with_m.move_to(ORIGIN)))
+
+        # self.remove(superposition_text, equation)
+        self.play(Uncreate(superposition_text))
+        self.play(Uncreate(equation))
+        self.wait(2)
+
+        self.play(Uncreate(square_with_m))
+
+        text = Text("Qubit collapses with probability 1/2 to 0 or 1:")
+        text.to_edge(UP)
+        self.play(Create(text))
+
+        self.play(ScaleInPlace(sphere, scale_factor=0.1, run_time=2))
+
+        # Generate a single random number (0 or 1) with probability 1/2
+        random_number = np.random.randint(2)
+        if random_number == 0:
+            color = BLUE
+            equation = MathTex(r"\mathbf{|} \mathbf{0} \mathbf{\rangle}").scale(1.5)
+        if random_number == 1:
+            color = RED
+            equation = MathTex(r"\mathbf{|} \mathbf{1} \mathbf{\rangle}").scale(1.5)
+        dot = Dot(ORIGIN, color=color)
+
+        equation.next_to(dot, UP, buff=0.5)
+
+        self.add(dot, equation)
+        self.play(Uncreate(text))
+        self.wait(2)
+        self.remove(dot)
+        dot = Dot(ORIGIN, radius=1.5, color=color)
+        self.add(dot)
+        self.wait(1)
+        self.remove(equation)
+
+        self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
+
+        # Show the scene
+        self.wait(2)
+
 '''
 for i in range(0, 5):
     for j in range(i+1, 5):
