@@ -172,8 +172,8 @@ class NodeGraphScene(ThreeDScene):
                 break # for initial testing purposes, just do 1 pair of groupings
             break
     
-    # simulates the act of measurement by shrinking respective sphere, representative of quantum state being measured 
-    # also incorporates randomness of measurement with np.random.randint()
+    '''simulates the act of measurement by shrinking respective sphere, representative of quantum state being measured 
+    also incorporates randomness of measurement with np.random.randint()'''
     def measure(self, sphere_group, node_group, state, edge_map):
         sphere = sphere_group[state]
         self.measurement_visualization(state)
@@ -206,6 +206,7 @@ class NodeGraphScene(ThreeDScene):
         self.play(Create(edge))
         pass
 
+    ''' "pop-up" rectangle screen to show applicaiton of measurement matrix'''
     def measurement_visualization(self, state):
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90* DEGREES)
         scale_factor = 0.75
@@ -243,7 +244,7 @@ class NodeGraphScene(ThreeDScene):
 
 
 
-# for testing purposes of above measurement_visualization method
+''' for testing purposes of above measurement_visualization method'''
 class Measurement1(ThreeDScene):
     def construct(self):
         self.set_camera_orientation(phi=0 * DEGREES, theta=-90* DEGREES)
