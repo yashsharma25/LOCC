@@ -86,8 +86,8 @@ def GHZ_3_tensored_another(dims):
 # em.get_le_multiple(k_party_obj, 0, 1)
 
 
-em = EntanglementMeasures(2, GHZ_5(2), 4)
-k_party_obj = k_party(5, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_5(2))
+#em = EntanglementMeasures(2, GHZ_5(2), 4)
+#k_party_obj = k_party(5, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_5(2))
 
 def bipartite_entropy_check():
     q_state_np = k_party_obj.q_state.data.reshape(2,2,2,2,2) # 5 state quantum system - 2 for the 2 dimensionality of qubits
@@ -99,25 +99,25 @@ def bipartite_entropy_check():
     print(q_state_np.shape)
 
 
-# em = EntanglementMeasures(2, GHZ_4(2), 3)
-# k_party_obj = k_party(4, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_4(2))
+em = EntanglementMeasures(2, GHZ_4(2), 3)
+k_party_obj = k_party(4, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_4(2))
 
 # em.get_le_upper_bound(k_party_obj, 0, 1)
 
 
-# for i in range(0, 4):
-#     for j in range(i+1, 4):
-#         print("i = ", i)
-#         print("j = ", j)
-#         # em.get_le_upper_bound(k_party_obj, i, j)
-#         # em.get_le_lower_bound(k_party_obj, i, j)
-#         A = set([i,j])
-#         B = set(np.arange(4))
+for i in range(0, 4):
+    for j in range(i+1, 4):
+        print("i = ", i)
+        print("j = ", j)
+        # em.get_le_upper_bound(k_party_obj, i, j)
+        # em.get_le_lower_bound(k_party_obj, i, j)
+        A = set([i,j])
+        B = set(np.arange(4))
 
-#         # Get new set with elements that are only in a but not in b
-#         B = B.difference(A)
-#         print("A = ", A, " B = ", B)
-#         ee = k_party_obj.bipartite_entropy(list(A), list(B))
-#         print('EE = ', ee)
+        # Get new set with elements that are only in a but not in b
+        B = B.difference(A)
+        print("A = ", A, " B = ", B)
+        ee = k_party_obj.bipartite_entropy(list(A), list(B))
+        print('EE = ', ee)
 
 #em.get_le_lower_bound(k_party_obj, 0, 1)

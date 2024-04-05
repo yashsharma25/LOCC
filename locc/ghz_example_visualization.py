@@ -5,7 +5,7 @@ from k_party import k_party
 from manim import *
 import copy
 
-# to run visualization: manimce -pql example_ghz.py NodeGraphScene
+# to run visualization: manimce -pql ghz_example_visualization.py NodeGraphScene
 # or go to locc/media/videos/example_ghz/1080p60 for prev compiled video
 
 def GHZ(dims):
@@ -56,39 +56,6 @@ def GHZ_3_tensored_another(dims):
     #print(ghz)
     return ghz_tensored_another
 
-# em = EntanglementMeasures(3, GHZ(3), 3)
-
-# k_party_obj1 = k_party(3, 3, [(1, [3]), (1, [3]), (1, [3])], GHZ(3))
-# k_party_obj2 = k_party(3, 3, [(1, [3]), (1, [3]), (1, [3])], GHZ(3))
-
-# em.get_le_upper_bound_evolving([k_party_obj1, k_party_obj2], 0, 1)
-
-#now we compute the nursing numbers for this state
-# k_party_obj = k_party(2, 2, [(1, [2]), (1, [2]), (1, [2])], GHZ(2))
-
-# em = EntanglementMeasures(2, GHZ(2), 2)
-# em.get_le_upper_bound(k_party_obj, 0, 1)
-
-# k_party_obj = k_party(3, 3, [(1, [3]), (1, [3]), (1, [3])], GHZ(3))
-
-# em = EntanglementMeasures(3, GHZ(3), 2)
-# em.get_le_upper_bound(k_party_obj, 0, 1)
-# em.get_le_upper_bound(k_party_obj, 1, 2)
-# em.get_le_upper_bound(k_party_obj, 0, 1)
-
-
-# em.get_le_lower_bound(k_party_obj, 0, 2)
-# em.get_le_lower_bound(k_party_obj, 0, 1)
-# em.get_le_lower_bound(k_party_obj, 1, 2)
-
-# em.get_le_lower_bound(k_party_obj, 0, 2)
-
-# em = EntanglementMeasures(2, GHZ_tensored_another(2), 2)
-# k_party_obj = k_party(2, 3, [(1, [2]), (1, [2]), (2, [2, 2])], GHZ_tensored_another(2))
-
-# em.get_le_multiple(k_party_obj, 0, 1)
-
-
 em = EntanglementMeasures(2, GHZ_5(2), 4)
 k_party_obj = k_party(5, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_5(2))
 
@@ -101,11 +68,6 @@ def bipartite_entropy_check():
 
     print(q_state_np.shape)
 
-
-# em = EntanglementMeasures(2, GHZ_4(2), 3)
-# k_party_obj = k_party(4, 2, [(1, [2]), (1, [2]), (1, [2]), (1, [2])], GHZ_4(2))
-
-# em.get_le_upper_bound(k_party_obj, 0, 1)
 
 class NodeGraphScene(ThreeDScene):
     def construct(self):
@@ -171,7 +133,6 @@ class NodeGraphScene(ThreeDScene):
             # Add the label to the scene
             self.play(Create(label))
 
-############################################################################################
         # MODEL INVIDUAL EEs
         for i in range(0, numParties):
             for j in range(i+1, numParties):
@@ -186,12 +147,14 @@ class NodeGraphScene(ThreeDScene):
                 # set up set for ee and get ee
                 A, B = set([i,j]), set(np.arange(5))
                 B = B.difference(A)
+                print()
                 ee = k_party_obj.bipartite_entropy(list(A), list(B))
 
                 A_B_text = Text(f"A = {A}" + f" B = {B}")
                 A_B_text.move_to([0,3,0])
                 self.play(Create(A_B_text))
-                ee_text = Text(f"Entaglement Entropy: {ee}")
+                ee_string = f"EE: {ee:.4f}"
+                ee_text = Text(ee_string)
                 ee_text.to_edge(DOWN)
                 self.play(Create(ee_text))
 
@@ -206,14 +169,14 @@ class NodeGraphScene(ThreeDScene):
                 # reset for the next A set
                 self.play(Create(sphere_group_copy), Create(node_group_copy), Create(edge_group_copy))
                 self.wait(1)
-                break
+                break # for initial testing purposes, just do 1 pair of groupings
             break
-###############################################################################################################
     
     # simulates the act of measurement by shrinking respective sphere, representative of quantum state being measured 
     # also incorporates randomness of measurement with np.random.randint()
     def measure(self, sphere_group, node_group, state, edge_map):
         sphere = sphere_group[state]
+        self.measurement_visualization(state)
         self.play(ScaleInPlace(sphere, scale_factor=0.1, run_time=2))
         random_number = np.random.randint(2)
         if random_number == 0:
@@ -228,8 +191,11 @@ class NodeGraphScene(ThreeDScene):
                 edge_delete = edge_map[(i, state)]
             self.play(Uncreate(edge_delete))
         pass
-    
-    # simulates change in entaglement entropy by changing the thickness of the edge between state i and state j
+    '''
+    simulates change in entaglement entropy by changing
+    the thickness of the edge between state i and state j
+    '''
+    # 
     def eeChange(self, A, edge_map, measured, ee):
         A_list = list(A)
         state1, state2 = A_list[0], A_list[1]
@@ -240,7 +206,81 @@ class NodeGraphScene(ThreeDScene):
         self.play(Create(edge))
         pass
 
-# Basic Quantum Measurement (Rough Draft)
+    def measurement_visualization(self, state):
+        self.set_camera_orientation(phi=0 * DEGREES, theta=-90* DEGREES)
+        scale_factor = 0.75
+        top_left = np.array([-5,0,0])
+        rectangle_width = 2 * (1 + 1)
+        rectangle_height = 2 * (1 + 0.5)
+        rectangle = Rectangle(width=rectangle_width, height=rectangle_height, color = WHITE)
+        rectangle.scale(scale_factor)
+        rectangle.move_to(top_left)
+        self.play(Create(rectangle))
+
+        # Create a sphere in 3D space
+        sphere = Sphere(radius=1)
+        sphere.scale(scale_factor)
+        sphere.move_to(top_left)
+        self.play(Create(sphere))
+        self.wait(1)
+
+        # Create a square
+        square = Square(side_length=2)
+        square.scale(scale_factor)
+
+        # Create the letter 'M'
+        letter_m = Text("M" + str(state) + " ", font_size=48, color=WHITE)
+        letter_m.scale(scale_factor)
+
+        # Position the letter 'M' at the center of the square
+        letter_m.move_to(square)
+
+        # Create a VGroup to combine the square and the letter 'M'
+        square_with_m = VGroup(square, letter_m)
+        square_with_m.move_to(top_left)
+        self.play(Create(square_with_m))
+        self.play(Uncreate(square_with_m), Uncreate(sphere), Uncreate(rectangle))
+
+
+
+# for testing purposes of above measurement_visualization method
+class Measurement1(ThreeDScene):
+    def construct(self):
+        self.set_camera_orientation(phi=0 * DEGREES, theta=-90* DEGREES)
+        scale_factor = 0.75
+        top_left = np.array([-5,0,0])
+        rectangle_width = 2 * (1 + 1)
+        rectangle_height = 2 * (1 + 0.5)
+        rectangle = Rectangle(width=rectangle_width, height=rectangle_height, color = WHITE)
+        rectangle.scale(scale_factor)
+        rectangle.move_to(top_left)
+        self.play(Create(rectangle))
+
+        # Create a sphere in 3D space
+        sphere = Sphere(radius=1)
+        sphere.scale(scale_factor)
+        sphere.move_to(top_left)
+        self.play(Create(sphere))
+        self.wait(1)
+
+        # Create a square
+        square = Square(side_length=2)
+        square.scale(scale_factor)
+
+        # Create the letter 'M'
+        letter_m = Text("M" + str(1) + " ", font_size=48, color=WHITE)
+        letter_m.scale(scale_factor)
+
+        # Position the letter 'M' at the center of the square
+        letter_m.move_to(square)
+
+        # Create a VGroup to combine the square and the letter 'M'
+        square_with_m = VGroup(square, letter_m)
+        square_with_m.move_to(top_left)
+        self.play(Create(square_with_m))
+        self.play(Uncreate(square_with_m), Uncreate(sphere), Uncreate(rectangle))
+
+# Basic Single Node Quantum Measurement
 class QuantumMeasurement(ThreeDScene):
     def construct(self):
         # text main
@@ -296,7 +336,8 @@ class QuantumMeasurement(ThreeDScene):
         self.wait(3)
 
         # Create a square
-        square = Square(side_length=2, color=BLUE)
+        square = Square(side_length=2)
+        square.color(BLUE)
 
         # Create the letter 'M'
         letter_m = Text("M", font_size=48, color=WHITE)
