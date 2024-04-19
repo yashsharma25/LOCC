@@ -28,7 +28,7 @@ class EntanglementMeasures:
 
     def entanglement_fluctuation(self, quantum_state):
         return
-
+    
     #lower bound for localisable entanglement
     def get_le_lower_bound(self, k_party_obj, partyA, partyB):
         self.k_party_obj = k_party_obj
