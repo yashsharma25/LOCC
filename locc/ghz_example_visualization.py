@@ -159,7 +159,7 @@ class PairWiseEntanglement(ThreeDScene):
         # Create Manim objects for nodes
         nodes = [Dot(point=coord) for coord in coordinates]
 
-        # initialize edges
+        # initialize edgesAbout
         edges, edge_map = [], {}
         for i in range(numParties):
             for j in range(i+1, numParties):
