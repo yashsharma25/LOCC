@@ -1,18 +1,101 @@
 import sys
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                             QLabel, QLineEdit, QComboBox, QPushButton, QMessageBox, QScrollArea)
+import os
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QComboBox, QScrollArea)
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimediaWidgets import QVideoWidget
+from PyQt5.QtCore import Qt, QUrl
 import numpy as np
 from qiskit.quantum_info import Statevector, shannon_entropy
 from qiskit.circuit.library import XGate, HGate, CXGate
 from locc_controller import locc_controller
 from k_party import k_party
 from locc_operation import locc_operation
+import copy
+
+from manim import *
+
+
+class MeasurementScene(ThreeDScene):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+    
+    def construct(self):
+        my_text = Text(f"EXECUTING {self.locc_op.operation_type} on party {self.locc_op.party_index}, qudit {self.locc_op.qudit_index}")
+        print(self.k_party_obj) # just an example of how you access the k party obj
+        my_text.to_edge(UP)
+        self.play(Write(my_text))
+        self.wait(2)
+        self.play(Uncreate(my_text))
+
+        if self.locc_op.operation_type == "measurement":
+            self.create_graph(self.k_party_obj)
+        
+        if self.locc_op.operation_type == "conditional":
+            print("conditional")
+    
+    def create_graph(self, k_party_obj):
+        # nice side angle to show 3D spheres
+        self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
+        
+        # Define nodes
+        numParties = k_party_obj.parties
+        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(numParties)]
+
+        # Specify numerical coordinates for the nodes
+        coordinates = [(np.cos(angle), np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, 5, endpoint=False)]
+        
+        # Scaling factor to adjust the spread
+        scaling_factor = 2.0  # Adjust this value as needed
+        
+        # Apply scaling to the coordinates     
+        coordinates = [(scaling_factor * x, scaling_factor * y, scaling_factor * z) for x, y, z in coordinates]
+
+        # move nodes to coords
+        for node, coord in zip(nodes, coordinates):
+            node.move_to(coord) 
+
+        # Create Manim objects for nodes
+        node_dots = [Dot(point=coord) for coord in coordinates]
+
+        # initialize edges
+        edges, edge_map = [], {}
+        for i in range(numParties):
+            for j in range(i+1, numParties):
+                if (j,i) in edge_map: # to catch for repeat edges
+                    continue
+                else:
+                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
+                    edge_map[(i,j)] = edge
+                    edges.append(edge)
+        
+        # create VGroups
+        sphere_group, node_group, edge_group = VGroup(*nodes), VGroup(*node_dots), VGroup(*edges)
+        sphere_group_copy, node_group_copy, edge_group_copy = copy.deepcopy(sphere_group), copy.deepcopy(node_group), copy.deepcopy(edge_group)
+        # Display the grouped objects in the scene using self.play()
+        self.play(Create(sphere_group), Create(node_group), Create(edge_group))
+
+        # move camera to the normal "birds eye" view
+        self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
+
+        # Add a label to the nodes
+        for i in range(numParties):
+            label = Tex(f"{i}")
+            if (i==3) or (i==4):
+                label.next_to(node_dots[i], DOWN)
+            else:
+                label.next_to(node_dots[i], UP)
+            
+            # Add the label to the scene
+            self.play(Create(label))
+
 
 class QuantumOperationsGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Quantum Operations")
-        self.setGeometry(100, 100, 600, 800)
+        self.setGeometry(100, 100, 800, 600)  # Set a larger window size
+
+        self.locc_op = locc_operation(1, 0, "measurement")  # example operation
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -23,19 +106,49 @@ class QuantumOperationsGUI(QMainWindow):
         main_layout.addWidget(scroll_area)
 
         scroll_content = QWidget()
-        scroll_layout = QVBoxLayout(scroll_content)
+        self.scroll_layout = QVBoxLayout(scroll_content)
         scroll_area.setWidget(scroll_content)
 
         # LOCC Operation Creator
-        self.create_locc_operation_ui(scroll_layout)
+        self.create_locc_operation_ui(self.scroll_layout)
 
         # k_party Creator
-        self.create_k_party_ui(scroll_layout)
+        self.create_k_party_ui(self.scroll_layout)
+
+        # manim video creator
+        self.videoWidget = QVideoWidget(self)
+        self.scroll_layout.addWidget(self.videoWidget)
+        self.videoWidget.setMinimumSize(640, 480)  # Set a minimum size for the video widget
+
+        self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+        self.mediaPlayer.setVideoOutput(self.videoWidget)
+
+        # Add control buttons
+        controlLayout = QHBoxLayout()
+        playButton = QPushButton('Play')
+        playButton.clicked.connect(self.mediaPlayer.play)
+        controlLayout.addWidget(playButton)
+
+        pauseButton = QPushButton('Pause')
+        pauseButton.clicked.connect(self.mediaPlayer.pause)
+        controlLayout.addWidget(pauseButton)
+
+        # Add a slider for seeking
+        self.positionSlider = QSlider(Qt.Horizontal)
+        self.positionSlider.setRange(0, 0)
+        self.positionSlider.sliderMoved.connect(self.setPosition)
+        controlLayout.addWidget(self.positionSlider)
+
+        self.scroll_layout.addLayout(controlLayout)
+
+        # Connect signals
+        self.mediaPlayer.positionChanged.connect(self.positionChanged)
+        self.mediaPlayer.durationChanged.connect(self.durationChanged)
 
         # Execute Protocol Button
         execute_button = QPushButton("Execute Protocol")
-        execute_button.clicked.connect(self.execute_protocol)
-        scroll_layout.addWidget(execute_button)
+        execute_button.clicked.connect(self.execute_measurement_scene)
+        self.scroll_layout.addWidget(execute_button)
 
         self.k_party_instance = None
         self.locc_operation_instance = None
@@ -195,7 +308,7 @@ class QuantumOperationsGUI(QMainWindow):
     def create_initial_state(self, dims):
         return Statevector.from_label('0' * dims)
 
-    def execute_protocol(self):
+    def execute_measurement_scene(self):
         if self.k_party_instance is None:
             QMessageBox.critical(self, "Error", "k_party instance not created.")
             return
@@ -207,7 +320,41 @@ class QuantumOperationsGUI(QMainWindow):
         # Create locc_controller instance and execute protocol
         controller = locc_controller(self.locc_operation_instance, self.k_party_instance)
         controller.execute_protocol()
+
+        # Specify the output file path
+        output_file = "measurement_scene.mp4"
+        
+        # Create a temporary configuration for the scene
+        config.media_dir = "."
+        config.video_dir = "."
+        config.quality = "medium_quality"  # Adjust as needed
+        config.output_file = output_file
+
+        # Render the scene
+        scene = MeasurementScene()
+        scene.locc_op = self.locc_operation_instance[0]
+        scene.k_party_obj = self.k_party_instance
+        scene.render()
+
+        # Ensure the video file exists
+        if not os.path.exists(output_file):
+            QMessageBox.critical(self, "Error", f"Video file {output_file} not found.")
+            return
+
+        # Play the video in the QVideoWidget
+        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(output_file))))
+        self.mediaPlayer.play()
         QMessageBox.information(self, "Protocol Executed", "The protocol has been executed successfully.")
+    
+    def positionChanged(self, position):
+        self.positionSlider.setValue(position)
+
+    def durationChanged(self, duration):
+        self.positionSlider.setRange(0, duration)
+
+    def setPosition(self, position):
+        self.mediaPlayer.setPosition(position)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
