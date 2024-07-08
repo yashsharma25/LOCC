@@ -11,87 +11,188 @@ from locc_controller import locc_controller
 from k_party import k_party
 from locc_operation import locc_operation
 import copy
-
 from manim import *
 
+import sys
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtMultimedia import *
+from PyQt5.QtMultimediaWidgets import *
+from PyQt5.QtGui import *
+import os
+from manim import config, Scene
+from qiskit import *
+from qiskit.quantum_info import Statevector
+import numpy as np
 
 class MeasurementScene(ThreeDScene):
-    def __init__(self, **kwargs):
+    def __init__(self, locc_op, k_party_obj, **kwargs):
+        self.locc_op = locc_op
+        self.k_party_obj = k_party_obj
         super().__init__(**kwargs)
     
     def construct(self):
-        my_text = Text(f"EXECUTING {self.locc_op.operation_type} on party {self.locc_op.party_index}, qudit {self.locc_op.qudit_index}")
-        print(self.k_party_obj) # just an example of how you access the k party obj
-        my_text.to_edge(UP)
-        self.play(Write(my_text))
-        self.wait(2)
-        self.play(Uncreate(my_text))
-
-        if self.locc_op.operation_type == "measurement":
-            self.create_graph(self.k_party_obj)
-        
-        if self.locc_op.operation_type == "conditional":
-            print("conditional")
+        self.initialize_scene()
+        self.create_nodes_and_edges()
+        self.add_labels_to_nodes()
+        self.model_individual_EEs()
     
-    def create_graph(self, k_party_obj):
-        # nice side angle to show 3D spheres
+    def initialize_scene(self):
+        my_text = Text(f"EXECUTING {self.locc_op.operation_type} on party {self.locc_op.party_index}, qudit {self.locc_op.qudit_index}")
+        # my_text = Text("Modeling Entanglement Entropy: GHZ State").to_edge(ORIGIN)
+        self.play(Create(my_text))
+        self.wait(1)
+        self.play(Uncreate(my_text))
         self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
-        
-        # Define nodes
-        numParties = k_party_obj.parties
+
+    def create_nodes_and_edges(self):
+        numParties = self.k_party_obj.parties
         nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(numParties)]
+        coordinates = [(2 * np.cos(angle), 2 * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, numParties, endpoint=False)]
 
-        # Specify numerical coordinates for the nodes
-        coordinates = [(np.cos(angle), np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, 5, endpoint=False)]
-        
-        # Scaling factor to adjust the spread
-        scaling_factor = 2.0  # Adjust this value as needed
-        
-        # Apply scaling to the coordinates     
-        coordinates = [(scaling_factor * x, scaling_factor * y, scaling_factor * z) for x, y, z in coordinates]
-
-        # move nodes to coords
         for node, coord in zip(nodes, coordinates):
-            node.move_to(coord) 
+            node.move_to(coord)
 
-        # Create Manim objects for nodes
         node_dots = [Dot(point=coord) for coord in coordinates]
+        edges, self.edge_map = self.initialize_edges(numParties, node_dots)
 
-        # initialize edges
-        edges, edge_map = [], {}
-        for i in range(numParties):
-            for j in range(i+1, numParties):
-                if (j,i) in edge_map: # to catch for repeat edges
-                    continue
-                else:
-                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
-                    edge_map[(i,j)] = edge
-                    edges.append(edge)
-        
-        # create VGroups
-        sphere_group, node_group, edge_group = VGroup(*nodes), VGroup(*node_dots), VGroup(*edges)
-        sphere_group_copy, node_group_copy, edge_group_copy = copy.deepcopy(sphere_group), copy.deepcopy(node_group), copy.deepcopy(edge_group)
-        # Display the grouped objects in the scene using self.play()
-        self.play(Create(sphere_group), Create(node_group), Create(edge_group))
+        self.sphere_group = VGroup(*nodes)
+        self.node_group = VGroup(*node_dots)
+        self.edge_group = VGroup(*edges)
+        self.sphere_group_copy, self.node_group_copy, self.edge_group_copy = map(copy.deepcopy, [self.sphere_group, self.node_group, self.edge_group])
 
-        # move camera to the normal "birds eye" view
+        self.play(Create(self.sphere_group), Create(self.node_group), Create(self.edge_group))
         self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
 
-        # Add a label to the nodes
+    def initialize_edges(self, numParties, node_dots):
+        edges, self.edge_map = [], {}
         for i in range(numParties):
+            for j in range(i + 1, numParties):
+                if (j, i) not in self.edge_map:
+                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
+                    self.edge_map[(i, j)] = edge
+                    edges.append(edge)
+        return edges, self.edge_map
+
+    def add_labels_to_nodes(self):
+        for i, dot in enumerate(self.node_group):
             label = Tex(f"{i}")
-            if (i==3) or (i==4):
-                label.next_to(node_dots[i], DOWN)
-            else:
-                label.next_to(node_dots[i], UP)
-            
-            # Add the label to the scene
+            label.next_to(dot, DOWN if i in [3, 4] else UP)
             self.play(Create(label))
 
+    def model_individual_EEs(self):
+        numParties = self.k_party_obj.parties
+        for i in range(numParties):
+            for j in range(i + 1, numParties):
+                try:
+                    print(f"Processing nodes {i} and {j}")
+
+                    # Display EE information
+                    self.display_EE_info(i, j)
+
+                    # Calculate bipartite entropy
+                    A, B = set([i, j]), set(range(numParties)) - {i, j}
+                    ee = self.k_party_obj.bipartite_entropy(list(A), list(B))
+
+                    # Display EE results
+                    self.display_EE_results(A, B, ee)
+
+                    # Measure and visualize
+                    self.measure_and_visualize(A, B, ee)
+
+                    # Reset the groups for the next iteration
+                    self.sphere_group_copy, self.node_group_copy, self.edge_group_copy = map(copy.deepcopy, [self.sphere_group, self.node_group, self.edge_group])
+
+                    # Create the copied groups
+                    self.play(Create(self.sphere_group_copy), Create(self.node_group_copy), Create(self.edge_group_copy))
+
+                    # Wait for a moment
+                    self.wait(1)
+                except Exception as e:
+                    print(f"Error processing nodes {i} and {j}: {e}")
+                    break  # Break the loop if there is an error, remove this if you want to continue to the next pair
+
+    def display_EE_info(self, i, j):
+        my_text = Text(f"Entanglement entropy for nodes {i} and {j}").to_edge(UP)
+        self.play(Create(my_text))
+        self.wait(1)
+        self.play(Uncreate(my_text))
+
+    def display_EE_results(self, A, B, ee):
+        A_B_text = Text(f"A = {A} B = {B}").scale(0.50).move_to([0, 3, 0])
+        ee_text = Text(f"EE: {ee:.4f}").to_edge(DOWN)
+        self.play(Create(A_B_text), Create(ee_text))
+        self.play(Uncreate(A_B_text), Uncreate(ee_text))
+
+    def measure_and_visualize(self, A, B, ee):
+        measured = []
+        for state in B:
+            self.measure(state)
+            measured.append(state)
+            self.eeChange(A, measured, ee)
+            self.wait(1)
+
+    def measure(self, state):
+        sphere = self.sphere_group[state]
+        self.measurement_visualization(state)
+        self.play(ScaleInPlace(sphere, scale_factor=0.1, run_time=2))
+        random_color = BLUE if np.random.randint(2) == 0 else RED
+        self.node_group[state].set_color(random_color)
+        self.play(Create(sphere))
+        self.remove_edges(state)
+
+    def remove_edges(self, state):
+        for i in range(self.k_party_obj.parties):
+            if (state, i) in self.edge_map or (i, state) in self.edge_map:
+                edge_delete = self.edge_map.get((state, i)) or self.edge_map.get((i, state))
+                self.play(Uncreate(edge_delete))
+
+    def eeChange(self, A, measured, ee):
+        state1, state2 = list(A)
+        edge = self.edge_map[(state1, state2)]
+        edge.set_stroke(width=ee * 2 * edge.get_stroke_width())
+        self.play(Create(edge))
+
+    def measurement_visualization(self, state):
+        self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
+        top_left = np.array([-5, 0, 0])
+        scale_factor = 0.75
+        rectangle = Rectangle(width=4, height=3, color=WHITE).scale(scale_factor).move_to(top_left)
+        sphere = Sphere(radius=1).scale(scale_factor).move_to(top_left)
+        letter_m = Text(f"M{state}", font_size=48, color=WHITE).scale(scale_factor).move_to(Square(side_length=2).scale(scale_factor))
+
+        self.play(Create(rectangle), Create(sphere))
+        self.play(Create(letter_m))
+        self.play(Uncreate(letter_m), Uncreate(sphere), Uncreate(rectangle))
+
+class VideoThread(QThread):
+    video_generated = pyqtSignal(str)
+
+    def __init__(self, locc_operation, k_party_instance, video_path, parent=None):
+        super(VideoThread, self).__init__(parent)
+        self.locc_operation = locc_operation
+        self.k_party_instance = k_party_instance
+        self.video_path = video_path
+
+    def run(self):
+        # Specify the output file path
+        config.media_dir = "."
+        config.video_dir = "."
+        config.quality = "medium_quality"  # Adjust as needed
+        config.output_file = self.video_path
+
+        # Render the scene
+        scene = MeasurementScene(self.locc_operation, self.k_party_instance)
+        scene.render()
+
+        # Emit the signal with the video path
+        self.video_generated.emit(self.video_path)
 
 class QuantumOperationsGUI(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # INITIALIZE BASIC GUI ELEMENTS 
         self.setWindowTitle("Quantum Operations")
         self.setGeometry(100, 100, 800, 600)  # Set a larger window size
 
@@ -308,6 +409,18 @@ class QuantumOperationsGUI(QMainWindow):
     def create_initial_state(self, dims):
         return Statevector.from_label('0' * dims)
 
+    @pyqtSlot(str)
+    def on_video_generated(self, video_path):
+        # Ensure the video file exists
+        if not os.path.exists(video_path):
+            QMessageBox.critical(self, "Error", f"Video file {video_path} not found.")
+            return
+
+        # Play the video in the QVideoWidget
+        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(video_path))))
+        self.mediaPlayer.play()
+        QMessageBox.information(self, "Protocol Executed", "The protocol has been executed successfully.")
+
     def execute_measurement_scene(self):
         if self.k_party_instance is None:
             QMessageBox.critical(self, "Error", "k_party instance not created.")
@@ -323,28 +436,11 @@ class QuantumOperationsGUI(QMainWindow):
 
         # Specify the output file path
         output_file = "measurement_scene.mp4"
-        
-        # Create a temporary configuration for the scene
-        config.media_dir = "."
-        config.video_dir = "."
-        config.quality = "medium_quality"  # Adjust as needed
-        config.output_file = output_file
 
-        # Render the scene
-        scene = MeasurementScene()
-        scene.locc_op = self.locc_operation_instance[0]
-        scene.k_party_obj = self.k_party_instance
-        scene.render()
-
-        # Ensure the video file exists
-        if not os.path.exists(output_file):
-            QMessageBox.critical(self, "Error", f"Video file {output_file} not found.")
-            return
-
-        # Play the video in the QVideoWidget
-        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(output_file))))
-        self.mediaPlayer.play()
-        QMessageBox.information(self, "Protocol Executed", "The protocol has been executed successfully.")
+        # Create and start the video generation thread
+        self.video_thread = VideoThread(self.locc_operation_instance[0], self.k_party_instance, output_file)
+        self.video_thread.video_generated.connect(self.on_video_generated)
+        self.video_thread.start()
     
     def positionChanged(self, position):
         self.positionSlider.setValue(position)
@@ -355,8 +451,7 @@ class QuantumOperationsGUI(QMainWindow):
     def setPosition(self, position):
         self.mediaPlayer.setPosition(position)
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = QuantumOperationsGUI()
     window.show()

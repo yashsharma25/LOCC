@@ -160,14 +160,14 @@ class PairWiseEntanglement(ThreeDScene):
         nodes = [Dot(point=coord) for coord in coordinates]
 
         # initialize edgesAbout
-        edges, edge_map = [], {}
+        edges, self.edge_map = [], {}
         for i in range(numParties):
             for j in range(i+1, numParties):
-                if (j,i) in edge_map: # to catch for repeat edges
+                if (j,i) in self.edge_map: # to catch for repeat edges
                     continue
                 else:
                     edge = Line(nodes[i].get_center(), nodes[j].get_center())
-                    edge_map[(i,j)] = edge
+                    self.edge_map[(i,j)] = edge
                     edges.append(edge)
         
         # create VGroups
@@ -221,9 +221,9 @@ class PairWiseEntanglement(ThreeDScene):
                 # measure each state in B, and show change in EE
                 measured = []
                 for state in B:
-                    self.measure(sphere_group, node_group, state, edge_map)
+                    self.measure(sphere_group, node_group, state, self.edge_map)
                     measured.append(state)
-                    self.eeChange(A, edge_map, measured, ee)
+                    self.eeChange(A, self.edge_map, measured, ee)
                     self.wait(1)
                 self.play(Uncreate(A_B_text), Uncreate(ee_text))
                 # reset for the next A set
@@ -297,10 +297,10 @@ class PairWiseEntanglement(ThreeDScene):
             node_group[state].set_color(RED)
         self.play(Create(sphere_measure))
         for i in range(k_party_obj.parties): # check this
-            if (state,i) in edge_map:
-                edge_delete = edge_map[(state, i)]
-            if (i, state) in edge_map:
-                edge_delete = edge_map[(i, state)]
+            if (state,i) in self.edge_map:
+                edge_delete = self.edge_map[(state, i)]
+            if (i, state) in self.edge_map:
+                edge_delete = self.edge_map[(i, state)]
             self.play(Uncreate(edge_delete))
         self.play(Uncreate(standard_basis_0), Uncreate(standard_basis_1), Uncreate(sphere), Uncreate(rectangle), Uncreate(my_text))
         pass
@@ -312,7 +312,7 @@ class PairWiseEntanglement(ThreeDScene):
         A_list = list(A)
         state1, state2 = A_list[0], A_list[1]
         # ee = getEEChange(state1, state2, measured) # state1 and state2 are states not being measured (set A) and measured is the set of states (in B) that have already been measured
-        edge = edge_map[(state1, state2)] # get correct edge
+        edge = self.edge_map[(state1, state2)] # get correct edge
         scaling_factor = ee * 2
         edge.set_stroke(width=scaling_factor * edge.get_stroke_width()) # Increase the thickness based on the scaling factor
         self.play(Create(edge))
@@ -481,175 +481,120 @@ class Measurement1NEW(ThreeDScene):
 
 class NodeGraphScene(ThreeDScene):
     def construct(self):
-####################################################################################################################
-        # INITIALIZATION
-        my_text = Text("Modeling Entaglement Entropy: GHZ State")
-        my_text.to_edge(ORIGIN)
+        self.initialize_scene()
+        self.create_nodes_and_edges()
+        self.add_labels_to_nodes()
+        self.model_individual_EEs()
+    
+    def initialize_scene(self):
+        my_text = Text("Modeling Entanglement Entropy: GHZ State").to_edge(ORIGIN)
+        self.play(Create(my_text))
+        self.wait(1)
+        self.play(Uncreate(my_text))
+        self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
+
+    def create_nodes_and_edges(self):
+        numParties = k_party_obj.parties
+        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(numParties)]
+        coordinates = [(2 * np.cos(angle), 2 * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, numParties, endpoint=False)]
+
+        for node, coord in zip(nodes, coordinates):
+            node.move_to(coord)
+
+        node_dots = [Dot(point=coord) for coord in coordinates]
+        edges, self.edge_map = self.initialize_edges(numParties, node_dots)
+
+        self.sphere_group = VGroup(*nodes)
+        self.node_group = VGroup(*node_dots)
+        self.edge_group = VGroup(*edges)
+        self.sphere_group_copy, self.node_group_copy, self.edge_group_copy = map(copy.deepcopy, [self.sphere_group, self.node_group, self.edge_group])
+
+        self.play(Create(self.sphere_group), Create(self.node_group), Create(self.edge_group))
+        self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
+
+    def initialize_edges(self, numParties, node_dots):
+        edges, self.edge_map = [], {}
+        for i in range(numParties):
+            for j in range(i + 1, numParties):
+                if (j, i) not in self.edge_map:
+                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
+                    self.edge_map[(i, j)] = edge
+                    edges.append(edge)
+        return edges, self.edge_map
+
+    def add_labels_to_nodes(self):
+        for i, dot in enumerate(self.node_group):
+            label = Tex(f"{i}")
+            label.next_to(dot, DOWN if i in [3, 4] else UP)
+            self.play(Create(label))
+
+    def model_individual_EEs(self):
+        numParties = k_party_obj.parties
+        for i in range(numParties):
+            for j in range(i + 1, numParties):
+                self.display_EE_info(i, j)
+                A, B = set([i, j]), set(range(numParties)) - {i, j}
+                ee = k_party_obj.bipartite_entropy(list(A), list(B))
+
+                self.display_EE_results(A, B, ee)
+                self.measure_and_visualize(A, B, ee)
+                self.play(Create(self.sphere_group_copy), Create(self.node_group_copy), Create(self.edge_group_copy))
+                self.wait(1)
+                return  # For initial testing purposes, just do 1 pair of groupings
+
+    def display_EE_info(self, i, j):
+        my_text = Text(f"Entanglement entropy for nodes {i} and {j}").to_edge(UP)
         self.play(Create(my_text))
         self.wait(1)
         self.play(Uncreate(my_text))
 
-        # nice side angle to show 3D spheres
-        self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
-        
-        # Define nodes
-        numParties = k_party_obj.parties
-        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(numParties)]
+    def display_EE_results(self, A, B, ee):
+        A_B_text = Text(f"A = {A} B = {B}").scale(0.50).move_to([0, 3, 0])
+        ee_text = Text(f"EE: {ee:.4f}").to_edge(DOWN)
+        self.play(Create(A_B_text), Create(ee_text))
+        self.play(Uncreate(A_B_text), Uncreate(ee_text))
 
-        # Specify numerical coordinates for the nodes
-        coordinates = [(np.cos(angle), np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, 5, endpoint=False)]
-        
-        # Scaling factor to adjust the spread
-        scaling_factor = 2.0  # Adjust this value as needed
-        
-        # Apply scaling to the coordinates     
-        coordinates = [(scaling_factor * x, scaling_factor * y, scaling_factor * z) for x, y, z in coordinates]
+    def measure_and_visualize(self, A, B, ee):
+        measured = []
+        for state in B:
+            self.measure(state)
+            measured.append(state)
+            self.eeChange(A, measured, ee)
+            self.wait(1)
 
-        # move nodes to coords
-        for node, coord in zip(nodes, coordinates):
-            node.move_to(coord) 
-
-        # Create Manim objects for nodes
-        node_dots = [Dot(point=coord) for coord in coordinates]
-
-        # initialize edges
-        edges, edge_map = [], {}
-        for i in range(numParties):
-            for j in range(i+1, numParties):
-                if (j,i) in edge_map: # to catch for repeat edges
-                    continue
-                else:
-                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
-                    edge_map[(i,j)] = edge
-                    edges.append(edge)
-        
-        # create VGroups
-        sphere_group, node_group, edge_group = VGroup(*nodes), VGroup(*node_dots), VGroup(*edges)
-        sphere_group_copy, node_group_copy, edge_group_copy = copy.deepcopy(sphere_group), copy.deepcopy(node_group), copy.deepcopy(edge_group)
-        # Display the grouped objects in the scene using self.play()
-        self.play(Create(sphere_group), Create(node_group), Create(edge_group))
-
-        # move camera to the normal "birds eye" view
-        self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
-
-        # Add a label to the nodes
-        for i in range(numParties):
-            label = Tex(f"{i}")
-            if (i==3) or (i==4):
-                label.next_to(node_dots[i], DOWN)
-            else:
-                label.next_to(node_dots[i], UP)
-            
-            # Add the label to the scene
-            self.play(Create(label))
-
-        # MODEL INVIDUAL EEs
-        for i in range(0, numParties):
-            for j in range(i+1, numParties):
-
-                # text main loop
-                my_text = Text(f"Entaglement entropy for nodes {i} and {j}")
-                my_text.to_edge(UP) # top of scene/screen
-                self.play(Create(my_text))
-                self.wait(1)
-                self.play(Uncreate(my_text))
-                
-                # set up set for ee and get ee
-                A, B = set([i,j]), set(np.arange(5))
-                B = B.difference(A)
-                print()
-                ee = k_party_obj.bipartite_entropy(list(A), list(B))
-
-                A_B_text = Text(f"A = {A}" + f" B = {B}")
-                A_B_text.scale(0.50).move_to([0,3,0])
-                self.play(Create(A_B_text))
-                ee_string = f"EE: {ee:.4f}"
-                ee_text = Text(ee_string)
-                ee_text.to_edge(DOWN)
-                self.play(Create(ee_text))
-
-                # measure each state in B, and show change in EE
-                measured = []
-                for state in B:
-                    self.measure(sphere_group, node_group, state, edge_map)
-                    measured.append(state)
-                    self.eeChange(A, edge_map, measured, ee)
-                    self.wait(1)
-                self.play(Uncreate(A_B_text), Uncreate(ee_text))
-                # reset for the next A set
-                self.play(Create(sphere_group_copy), Create(node_group_copy), Create(edge_group_copy))
-                self.wait(1)
-                break # for initial testing purposes, just do 1 pair of groupings
-            break
-    
-    '''simulates the act of measurement by shrinking respective sphere, representative of quantum state being measured 
-    also incorporates randomness of measurement with np.random.randint()'''
-    def measure(self, sphere_group, node_group, state, edge_map):
-        sphere = sphere_group[state]
+    def measure(self, state):
+        sphere = self.sphere_group[state]
         self.measurement_visualization(state)
         self.play(ScaleInPlace(sphere, scale_factor=0.1, run_time=2))
-        random_number = np.random.randint(2)
-        if random_number == 0:
-            node_group[state].set_color(BLUE)
-        if random_number == 1:
-            node_group[state].set_color(RED)
+        random_color = BLUE if np.random.randint(2) == 0 else RED
+        self.node_group[state].set_color(random_color)
         self.play(Create(sphere))
-        for i in range(k_party_obj.parties): # check this
-            if (state,i) in edge_map:
-                edge_delete = edge_map[(state, i)]
-            if (i, state) in edge_map:
-                edge_delete = edge_map[(i, state)]
-            self.play(Uncreate(edge_delete))
-        pass
-    '''
-    simulates change in entaglement entropy by changing
-    the thickness of the edge between state i and state j
-    '''
-    def eeChange(self, A, edge_map, measured, ee):
-        A_list = list(A)
-        state1, state2 = A_list[0], A_list[1]
-        # ee = getEEChange(state1, state2, measured) # state1 and state2 are states not being measured (set A) and measured is the set of states (in B) that have already been measured
-        edge = edge_map[(state1, state2)] # get correct edge
-        scaling_factor = ee * 2
-        edge.set_stroke(width=scaling_factor * edge.get_stroke_width()) # Increase the thickness based on the scaling factor
+        self.remove_edges(state)
+
+    def remove_edges(self, state):
+        for i in range(k_party_obj.parties):
+            if (state, i) in self.edge_map or (i, state) in self.edge_map:
+                edge_delete = self.edge_map.get((state, i)) or self.edge_map.get((i, state))
+                self.play(Uncreate(edge_delete))
+
+    def eeChange(self, A, measured, ee):
+        state1, state2 = list(A)
+        edge = self.edge_map[(state1, state2)]
+        edge.set_stroke(width=ee * 2 * edge.get_stroke_width())
         self.play(Create(edge))
-        pass
 
-    ''' "pop-up" rectangle screen to show applicaiton of measurement matrix'''
     def measurement_visualization(self, state):
-        self.set_camera_orientation(phi=0 * DEGREES, theta=-90* DEGREES)
+        self.set_camera_orientation(phi=0 * DEGREES, theta=-90 * DEGREES)
+        top_left = np.array([-5, 0, 0])
         scale_factor = 0.75
-        top_left = np.array([-5,0,0])
-        rectangle_width = 2 * (1 + 1)
-        rectangle_height = 2 * (1 + 0.5)
-        rectangle = Rectangle(width=rectangle_width, height=rectangle_height, color = WHITE)
-        rectangle.scale(scale_factor)
-        rectangle.move_to(top_left)
-        self.play(Create(rectangle))
+        rectangle = Rectangle(width=4, height=3, color=WHITE).scale(scale_factor).move_to(top_left)
+        sphere = Sphere(radius=1).scale(scale_factor).move_to(top_left)
+        letter_m = Text(f"M{state}", font_size=48, color=WHITE).scale(scale_factor).move_to(Square(side_length=2).scale(scale_factor))
 
-        # Create a sphere in 3D space
-        sphere = Sphere(radius=1)
-        sphere.scale(scale_factor)
-        sphere.move_to(top_left)
-        self.play(Create(sphere))
-        self.wait(1)
+        self.play(Create(rectangle), Create(sphere))
+        self.play(Create(letter_m))
+        self.play(Uncreate(letter_m), Uncreate(sphere), Uncreate(rectangle))
 
-        # Create a square
-        square = Square(side_length=2)
-        square.scale(scale_factor)
-
-        # Create the letter 'M'
-        letter_m = Text("M" + str(state) + " ", font_size=48, color=WHITE)
-        letter_m.scale(scale_factor)
-
-        # Position the letter 'M' at the center of the square
-        letter_m.move_to(square)
-
-        # Create a VGroup to combine the square and the letter 'M'
-        square_with_m = VGroup(square, letter_m)
-        square_with_m.move_to(top_left)
-        self.play(Create(square_with_m))
-        self.play(Uncreate(square_with_m), Uncreate(sphere), Uncreate(rectangle))
 
 ''' for testing purposes of above measurement_visualization method'''
 class Measurement1(ThreeDScene):
