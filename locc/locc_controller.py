@@ -38,6 +38,7 @@ class locc_controller:
                 #perform measurement
                 outcome, self.k_party_obj.q_state = self.k_party_obj.q_state.measure([qudit_index])
                 print("Outcome is ", outcome)
+                print("Type of Outcome Object: " + str(type(outcome)))
 
                 #save the measurement outcome which will be used in the next conditional operation
                 self.k_party_obj.measurement_result[(locc_op.party_index, qudit_index)] = outcome

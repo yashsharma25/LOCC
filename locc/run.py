@@ -1,36 +1,99 @@
 import sys
 import os
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSlider, QMessageBox, QLineEdit, QComboBox, QScrollArea)
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtCore import Qt, QUrl
 import numpy as np
-from qiskit.quantum_info import Statevector, shannon_entropy
+from qiskit import *
+from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import XGate, HGate, CXGate
 from locc_controller import locc_controller
 from k_party import k_party
 from locc_operation import locc_operation
-import copy
 from manim import *
-
-import sys
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtGui import *
-import os
-from manim import config, Scene
-from qiskit import *
-from qiskit.quantum_info import Statevector
-import numpy as np
+import copy
+
+os.environ["QT_QPA_PLATFORM"] = "xcb" # to fix qt.qpa.wayland: Wayland does not support QWindow::requestActivate() issue
+
+class VideoPlayerWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Video Player")
+        self.setGeometry(200, 200, 800, 600)
+
+        self.videoWidget = QVideoWidget()
+        self.setCentralWidget(self.videoWidget)
+
+        self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+        self.mediaPlayer.setVideoOutput(self.videoWidget)
+
+        # Control widget
+        controlWidget = QWidget()
+        controlLayout = QHBoxLayout(controlWidget)
+
+        self.playButton = QPushButton()
+        self.playButton.setIcon(QIcon.fromTheme("media-playback-start"))
+        self.playButton.clicked.connect(self.play)
+
+        self.positionSlider = QSlider(Qt.Horizontal)
+        self.positionSlider.setRange(0, 0)
+        self.positionSlider.sliderMoved.connect(self.setPosition)
+
+        controlLayout.addWidget(self.playButton)
+        controlLayout.addWidget(self.positionSlider)
+
+        # Add control widget to main window
+        layout = QVBoxLayout()
+        layout.addWidget(self.videoWidget)
+        layout.addWidget(controlWidget)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+        self.mediaPlayer.stateChanged.connect(self.mediaStateChanged)
+        self.mediaPlayer.positionChanged.connect(self.positionChanged)
+        self.mediaPlayer.durationChanged.connect(self.durationChanged)
+
+    def play(self):
+        if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
+            self.mediaPlayer.pause()
+        else:
+            self.mediaPlayer.play()
+
+    def mediaStateChanged(self, state):
+        if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
+            self.playButton.setIcon(QIcon.fromTheme("media-playback-pause"))
+        else:
+            self.playButton.setIcon(QIcon.fromTheme("media-playback-start"))
+
+    def positionChanged(self, position):
+        self.positionSlider.setValue(position)
+
+    def durationChanged(self, duration):
+        self.positionSlider.setRange(0, duration)
+
+    def setPosition(self, position):
+        self.mediaPlayer.setPosition(position)
+
+    def setMedia(self, url):
+        self.mediaPlayer.setMedia(QMediaContent(url))
 
 class MeasurementScene(ThreeDScene):
     def __init__(self, locc_op, k_party_obj, **kwargs):
         self.locc_op = locc_op
         self.k_party_obj = k_party_obj
         super().__init__(**kwargs)
-    
+    '''
+    # create nodes and edges (our 3D graph)
+        party_one = self.k_party_obj.state_desc[0] # VERY IMPORTANT!! UNDERSTAND STATE_DESC ATTRIBUTE -- ATM HARD CODED FOR ONE PARTY
+        num_qudits = party_one[0]
+        nodes = []
+        for _ in range(num_qudits):
+            nodes.append(Sphere(radius = 0.3, color = BLUE))
+    '''
     def construct(self):
         self.initialize_scene()
         self.create_nodes_and_edges()
@@ -46,15 +109,16 @@ class MeasurementScene(ThreeDScene):
         self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
 
     def create_nodes_and_edges(self):
-        numParties = self.k_party_obj.parties
-        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(numParties)]
-        coordinates = [(2 * np.cos(angle), 2 * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, numParties, endpoint=False)]
+        party_one = self.k_party_obj.state_desc[0] # VERY IMPORTANT!! UNDERSTAND STATE_DESC ATTRIBUTE -- ATM HARD CODED FOR ONE PARTY
+        num_qudits = party_one[0]
+        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(num_qudits)]
+        coordinates = [(2 * np.cos(angle), 2 * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, num_qudits, endpoint=False)]
 
         for node, coord in zip(nodes, coordinates):
             node.move_to(coord)
 
         node_dots = [Dot(point=coord) for coord in coordinates]
-        edges, self.edge_map = self.initialize_edges(numParties, node_dots)
+        edges, self.edge_map = self.initialize_edges(num_qudits, node_dots)
 
         self.sphere_group = VGroup(*nodes)
         self.node_group = VGroup(*node_dots)
@@ -64,10 +128,10 @@ class MeasurementScene(ThreeDScene):
         self.play(Create(self.sphere_group), Create(self.node_group), Create(self.edge_group))
         self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
 
-    def initialize_edges(self, numParties, node_dots):
+    def initialize_edges(self, num_qudits, node_dots):
         edges, self.edge_map = [], {}
-        for i in range(numParties):
-            for j in range(i + 1, numParties):
+        for i in range(num_qudits):
+            for j in range(i + 1, num_qudits):
                 if (j, i) not in self.edge_map:
                     edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
                     self.edge_map[(i, j)] = edge
@@ -81,9 +145,10 @@ class MeasurementScene(ThreeDScene):
             self.play(Create(label))
 
     def model_individual_EEs(self):
-        numParties = self.k_party_obj.parties
-        for i in range(numParties):
-            for j in range(i + 1, numParties):
+        party_one = self.k_party_obj.state_desc[0] # VERY IMPORTANT!! UNDERSTAND STATE_DESC ATTRIBUTE -- ATM HARD CODED FOR ONE PARTY
+        num_qudits = party_one[0]
+        for i in range(num_qudits):
+            for j in range(i + 1, num_qudits):
                 try:
                     print(f"Processing nodes {i} and {j}")
 
@@ -91,7 +156,7 @@ class MeasurementScene(ThreeDScene):
                     self.display_EE_info(i, j)
 
                     # Calculate bipartite entropy
-                    A, B = set([i, j]), set(range(numParties)) - {i, j}
+                    A, B = set([i, j]), set(range(num_qudits)) - {i, j}
                     ee = self.k_party_obj.bipartite_entropy(list(A), list(B))
 
                     # Display EE results
@@ -165,154 +230,223 @@ class MeasurementScene(ThreeDScene):
         self.play(Create(letter_m))
         self.play(Uncreate(letter_m), Uncreate(sphere), Uncreate(rectangle))
 
-class VideoThread(QThread):
-    video_generated = pyqtSignal(str)
-
-    def __init__(self, locc_operation, k_party_instance, video_path, parent=None):
-        super(VideoThread, self).__init__(parent)
-        self.locc_operation = locc_operation
-        self.k_party_instance = k_party_instance
-        self.video_path = video_path
-
-    def run(self):
-        # Specify the output file path
-        config.media_dir = "."
-        config.video_dir = "."
-        config.quality = "medium_quality"  # Adjust as needed
-        config.output_file = self.video_path
-
-        # Render the scene
-        scene = MeasurementScene(self.locc_operation, self.k_party_instance)
-        scene.render()
-
-        # Emit the signal with the video path
-        self.video_generated.emit(self.video_path)
-
 class QuantumOperationsGUI(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # INITIALIZE BASIC GUI ELEMENTS 
         self.setWindowTitle("Quantum Operations")
-        self.setGeometry(100, 100, 800, 600)  # Set a larger window size
-
-        self.locc_op = locc_operation(1, 0, "measurement")  # example operation
+        self.setGeometry(1000, 800, 1000, 800)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-
+        
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         main_layout.addWidget(scroll_area)
-
+        
         scroll_content = QWidget()
         self.scroll_layout = QVBoxLayout(scroll_content)
         scroll_area.setWidget(scroll_content)
 
-        # LOCC Operation Creator
-        self.create_locc_operation_ui(self.scroll_layout)
+        # Add mode toggle button
+        self.mode_button = QPushButton("Toggle Dark Mode")
+        self.mode_button.clicked.connect(self.toggle_mode)
+        self.mode_button.setFixedSize(150, 25)
+        self.scroll_layout.addWidget(self.mode_button)
 
-        # k_party Creator
         self.create_k_party_ui(self.scroll_layout)
-
-        # manim video creator
-        self.videoWidget = QVideoWidget(self)
-        self.scroll_layout.addWidget(self.videoWidget)
-        self.videoWidget.setMinimumSize(640, 480)  # Set a minimum size for the video widget
-
-        self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
-        self.mediaPlayer.setVideoOutput(self.videoWidget)
-
-        # Add control buttons
-        controlLayout = QHBoxLayout()
-        playButton = QPushButton('Play')
-        playButton.clicked.connect(self.mediaPlayer.play)
-        controlLayout.addWidget(playButton)
-
-        pauseButton = QPushButton('Pause')
-        pauseButton.clicked.connect(self.mediaPlayer.pause)
-        controlLayout.addWidget(pauseButton)
-
-        # Add a slider for seeking
-        self.positionSlider = QSlider(Qt.Horizontal)
-        self.positionSlider.setRange(0, 0)
-        self.positionSlider.sliderMoved.connect(self.setPosition)
-        controlLayout.addWidget(self.positionSlider)
-
-        self.scroll_layout.addLayout(controlLayout)
-
-        # Connect signals
-        self.mediaPlayer.positionChanged.connect(self.positionChanged)
-        self.mediaPlayer.durationChanged.connect(self.durationChanged)
-
-        # Execute Protocol Button
-        execute_button = QPushButton("Execute Protocol")
-        execute_button.clicked.connect(self.execute_measurement_scene)
-        self.scroll_layout.addWidget(execute_button)
+        self.create_locc_operation_ui(self.scroll_layout)
 
         self.k_party_instance = None
         self.locc_operation_instance = None
 
-    def create_locc_operation_ui(self, layout):
-        layout.addWidget(QLabel("LOCC Operation Creator"))
+        self.light_mode_stylesheet = """
+        QWidget {
+            background-color: white;
+            color: black;
+        }
+        QPushButton {
+            background-color: lightgray;
+            color: black;
+        }
+        QLineEdit {
+            background-color: white;
+            color: black;
+        }
+        QLabel {
+            color: black;
+        }
+        QScrollArea {
+            background-color: white;
+        }
+        QSlider::groove:horizontal {
+            background: lightgray;
+        }
+        QSlider::handle:horizontal {
+            background: darkgray;
+        }
+        """
 
-        self.party_index_entry = QLineEdit()
-        layout.addWidget(QLabel("Party Index:"))
-        layout.addWidget(self.party_index_entry)
+        self.dark_mode_stylesheet = """
+        QWidget {
+            background-color: #2E2E2E;
+            color: white;
+        }
+        QPushButton {
+            background-color: #444444;
+            color: white;
+        }
+        QLineEdit {
+            background-color: #555555;
+            color: white;
+        }
+        QLabel {
+            color: white;
+        }
+        QScrollArea {
+            background-color: #2E2E2E;
+        }
+        QSlider::groove:horizontal {
+            background: #555555;
+        }
+        QSlider::handle:horizontal {
+            background: #777777;
+        }
+        """
 
-        self.qudit_index_entry = QLineEdit()
-        layout.addWidget(QLabel("Qudit Index:"))
-        layout.addWidget(self.qudit_index_entry)
-
-        self.operation_type_combobox = QComboBox()
-        self.operation_type_combobox.addItems(["measurement", "conditional_operation", "default"])
-        layout.addWidget(QLabel("Operation Type:"))
-        layout.addWidget(self.operation_type_combobox)
-
-        self.operator_combobox = QComboBox()
-        self.operator_combobox.addItems(["XGate", "HGate", "CXGate"])
-        layout.addWidget(QLabel("Operator:"))
-        layout.addWidget(self.operator_combobox)
-
-        self.condition_party_index_entry = QLineEdit()
-        layout.addWidget(QLabel("Condition Party Index (leave empty if N/A):"))
-        layout.addWidget(self.condition_party_index_entry)
-
-        self.condition_qudit_index_entry = QLineEdit()
-        layout.addWidget(QLabel("Condition Qudit Index (leave empty if N/A):"))
-        layout.addWidget(self.condition_qudit_index_entry)
-
-        self.condition_measurement_result_entry = QLineEdit()
-        layout.addWidget(QLabel("Condition Measurement Result (leave empty if N/A):"))
-        layout.addWidget(self.condition_measurement_result_entry)
-
-        create_locc_button = QPushButton("Create LOCC Operation")
-        create_locc_button.clicked.connect(self.create_locc_operation)
-        layout.addWidget(create_locc_button)
+        self.set_light_mode()
 
     def create_k_party_ui(self, layout):
-        layout.addWidget(QLabel("k_party Creator"))
+        layout.addWidget(QLabel("K Party Creator"), alignment=Qt.AlignCenter)
 
+        h_layout1 = QHBoxLayout()
         self.k_entry = QLineEdit()
-        layout.addWidget(QLabel("Number of Parties (k):"))
-        layout.addWidget(self.k_entry)
+        h_layout1.addWidget(QLabel("Number of Parties (k):"))
+        h_layout1.addWidget(self.k_entry)
+
+        add_party_button = QPushButton("Add Party Entries")
+        add_party_button.clicked.connect(self.add_party_entries)
+        h_layout1.addWidget(add_party_button)
+
+        layout.addLayout(h_layout1)
 
         self.party_frame = QWidget()
         self.party_frame_layout = QVBoxLayout(self.party_frame)
         layout.addWidget(self.party_frame)
 
-        add_party_button = QPushButton("Add Party Entries")
-        add_party_button.clicked.connect(self.add_party_entries)
-        layout.addWidget(add_party_button)
-
+        h_layout2 = QHBoxLayout()
         self.party_names_entry = QLineEdit()
-        layout.addWidget(QLabel("Party Names (comma-separated, optional):"))
-        layout.addWidget(self.party_names_entry)
+        h_layout2.addWidget(QLabel("Party Names (comma-separated, optional):"))
+        h_layout2.addWidget(self.party_names_entry)
+        
+        layout.addLayout(h_layout2)
 
-        create_k_party_button = QPushButton("Create k_party")
+        button_layout = QHBoxLayout()
+        button_layout.addStretch() # stretch left
+        create_k_party_button = QPushButton("Create K Party")
         create_k_party_button.clicked.connect(self.create_k_party)
-        layout.addWidget(create_k_party_button)
+        create_k_party_button.setFixedSize(100, 25)
+        button_layout.addWidget(create_k_party_button)
+        button_layout.addStretch() # stretch right
+        layout.addLayout(button_layout)
+
+    def create_locc_operation_ui(self, layout):
+        self.spacer = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Minimum)
+        layout.addSpacerItem(self.spacer)
+        layout.addWidget(QLabel("LOCC Operation Creator"), alignment=Qt.AlignCenter)
+
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(QLabel("Operation Type:"))
+        self.operation_type_combobox = QComboBox()
+        self.operation_type_combobox.addItems(["select operation type...", "measurement", "conditional"])
+        h_layout.addWidget(self.operation_type_combobox)
+
+        set_op_type_specifics_button = QPushButton("Set Operation Type Specifics")
+        set_op_type_specifics_button.clicked.connect(lambda: self.set_operation_type_specifics(layout))
+        set_op_type_specifics_button.setFixedSize(500, 25)
+        h_layout.addWidget(set_op_type_specifics_button)
+        layout.addLayout(h_layout)
+
+        self.locc_op_additonal_widgets = [] # to keep track of dynamically added widgets
+
+        # self.operation_type_combobox.currentIndexChanged.connect(lambda: self.on_operation_combo_changed(layout))
+    
+    def set_operation_type_specifics(self, layout):
+        # remove previously added widgets
+        for widget in self.locc_op_additonal_widgets:
+            layout.removeWidget(widget)
+            widget.deleteLater()
+        self.locc_op_additonal_widgets.clear()
+
+        selected_text = self.operation_type_combobox.currentText()
+        
+        if selected_text == "measurement":
+            operator_label = QLabel("Operator")
+            layout.addWidget(operator_label)
+            self.operator_combobox = QComboBox()
+            self.operator_combobox.addItems(["XGate", "HGate", "CXGate"])
+            layout.addWidget(self.operator_combobox)
+            self.locc_op_additonal_widgets.append(operator_label)
+            self.locc_op_additonal_widgets.append(self.operator_combobox)
+
+        elif selected_text == "conditional":
+            operator_label = QLabel("Operator")
+            layout.addWidget(operator_label)
+            self.operator_combobox = QComboBox()
+            self.operator_combobox.addItems(["XGate", "HGate", "CXGate"])
+            layout.addWidget(self.operator_combobox)
+            self.locc_op_additonal_widgets.append(operator_label)
+            self.locc_op_additonal_widgets.append(self.operator_combobox)
+
+            self.condition_party_index_entry = QLineEdit()
+            cond_party_index_label = QLabel("Condition Party Index")
+            layout.addWidget(cond_party_index_label)
+            layout.addWidget(self.condition_party_index_entry)
+            self.locc_op_additonal_widgets.append(cond_party_index_label)
+            self.locc_op_additonal_widgets.append(self.condition_party_index_entry)
+
+            self.condition_qudit_index_entry = QLineEdit()
+            cond_qudit_index_label = QLabel("Condition Qudit Index")
+            layout.addWidget(cond_qudit_index_label)
+            layout.addWidget(self.condition_qudit_index_entry)
+            self.locc_op_additonal_widgets.append(cond_qudit_index_label)
+            self.locc_op_additonal_widgets.append(self.condition_qudit_index_entry)
+
+            self.condition_measurement_result_entry = QLineEdit()
+            cond_m_res_label = QLabel("Condition Measurement Result")
+            layout.addWidget(cond_m_res_label)
+            layout.addWidget(self.condition_measurement_result_entry)
+            self.locc_op_additonal_widgets.append(cond_m_res_label)
+            self.locc_op_additonal_widgets.append(self.condition_measurement_result_entry)
+
+        self.party_index_entry = QLineEdit()
+        party_index_label = QLabel("Party Index:")
+        layout.addWidget(party_index_label)
+        layout.addWidget(self.party_index_entry)
+        self.locc_op_additonal_widgets.append(party_index_label)
+        self.locc_op_additonal_widgets.append(self.party_index_entry)
+
+
+        self.qudit_index_entry = QLineEdit()
+        qudit_index_label = QLabel("Qudit Index:")
+        layout.addWidget(qudit_index_label)
+        layout.addWidget(self.qudit_index_entry)
+        self.locc_op_additonal_widgets.append(qudit_index_label)
+        self.locc_op_additonal_widgets.append(self.qudit_index_entry)
+
+        create_locc_button = QPushButton("Create LOCC Operation")
+        create_locc_button.clicked.connect(self.create_locc_operation)
+        # create_locc_button.setEnabled(False) # initially disable the button
+        layout.addWidget(create_locc_button)
+        self.locc_op_additonal_widgets.append(create_locc_button)
+
+        self.spacer = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Minimum)
+        layout.addSpacerItem(self.spacer)
+        execute_button = QPushButton("Execute Protocol")
+        execute_button.clicked.connect(self.execute_measurement_scene)
+        layout.addWidget(execute_button)
+        self.locc_op_additonal_widgets.append(execute_button)
 
     def create_locc_operation(self):
         try:
@@ -323,7 +457,7 @@ class QuantumOperationsGUI(QMainWindow):
             operator = None
             condition = None
             
-            if operation_type == "conditional_operation":
+            if operation_type == "conditional":
                 condition_party_index = int(self.condition_party_index_entry.text())
                 condition_qudit_index = int(self.condition_qudit_index_entry.text())
                 condition_measurement_result = int(self.condition_measurement_result_entry.text())
@@ -337,7 +471,7 @@ class QuantumOperationsGUI(QMainWindow):
                 elif operator_choice == "CXGate":
                     operator = CXGate()
             
-            elif operation_type == "default":
+            elif operation_type == "measurement":
                 operator_choice = self.operator_combobox.currentText()
                 if operator_choice == "XGate":
                     operator = XGate()
@@ -362,6 +496,10 @@ class QuantumOperationsGUI(QMainWindow):
         self.num_qudits_entries = []
         self.qudit_dims_entries = []
         
+        if self.k_entry.text() == '':
+            QMessageBox.critical(self, "Input Error", "Please enter an integer value in 'Number of Parties (k) field'")
+            return
+
         k = int(self.k_entry.text())
         for i in range(k):
             self.party_frame_layout.addWidget(QLabel(f"Number of Qudits for Party {i+1}:"))
@@ -404,55 +542,72 @@ class QuantumOperationsGUI(QMainWindow):
             QMessageBox.information(self, "k_party Created", f"k_party instance created with {k} parties.")
             
         except ValueError as e:
-            QMessageBox.critical(self, "Input Error", str(e))
+            QMessageBox.critical(self, "Input Error", "Please ensure all entries are integer values.")
 
     def create_initial_state(self, dims):
         return Statevector.from_label('0' * dims)
-
+    
     @pyqtSlot(str)
     def on_video_generated(self, video_path):
-        # Ensure the video file exists
         if not os.path.exists(video_path):
             QMessageBox.critical(self, "Error", f"Video file {video_path} not found.")
             return
-
-        # Play the video in the QVideoWidget
-        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(video_path))))
-        self.mediaPlayer.play()
-        QMessageBox.information(self, "Protocol Executed", "The protocol has been executed successfully.")
-
+        
+        if sys.platform.startswith('darwin'): # macOS
+            QProcess.startDetached("open", [video_path])
+        elif sys.platform.startswith('win'): # windows
+            os.startFile(video_path)
+        else: # linux, other unix-like operating systems
+            QProcess.startDetached("xdg-open", [video_path])
+        
+        QMessageBox.information(self, "Protocol Executed", "The Protocol has been executed successfully. The video will open in your default video player.")
+    
     def execute_measurement_scene(self):
         if self.k_party_instance is None:
-            QMessageBox.critical(self, "Error", "k_party instance not created.")
+            QMessageBox.critical(self, "Error", "K Party instance not created.")
             return
-        
         if self.locc_operation_instance is None:
-            QMessageBox.critical(self, "Error", "locc_operation instance not created.")
+            QMessageBox.critical(self, "Error", "LOCC Operation instance not created.")
             return
         
-        # Create locc_controller instance and execute protocol
         controller = locc_controller(self.locc_operation_instance, self.k_party_instance)
         controller.execute_protocol()
 
-        # Specify the output file path
         output_file = "measurement_scene.mp4"
 
-        # Create and start the video generation thread
-        self.video_thread = VideoThread(self.locc_operation_instance[0], self.k_party_instance, output_file)
+        self.video_thread = VideoThread(self.locc_operation_instance, self.k_party_instance, output_file)
         self.video_thread.video_generated.connect(self.on_video_generated)
         self.video_thread.start()
-    
-    def positionChanged(self, position):
-        self.positionSlider.setValue(position)
 
-    def durationChanged(self, duration):
-        self.positionSlider.setRange(0, duration)
+    def set_light_mode(self):
+        self.setStyleSheet(self.light_mode_stylesheet)
 
-    def setPosition(self, position):
-        self.mediaPlayer.setPosition(position)
+    def set_dark_mode(self):
+        self.setStyleSheet(self.dark_mode_stylesheet)
+
+    def toggle_mode(self):
+        if self.mode_button.text() == "Toggle Dark Mode":
+            self.set_dark_mode()
+            self.mode_button.setText("Toggle Light Mode")
+        else:
+            self.set_light_mode()
+            self.mode_button.setText("Toggle Dark Mode")
+
+class VideoThread(QThread):
+    video_generated = pyqtSignal(str)
+
+    def __init__(self, locc_operations, k_party, output_file):
+        super().__init__()
+        self.locc_operations = locc_operations
+        self.k_party = k_party
+        self.output_file = output_file
+
+    def run(self):
+        MeasurementScene(self.locc_operations, self.k_party)
+        self.video_generated.emit(self.output_file)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = QuantumOperationsGUI()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
