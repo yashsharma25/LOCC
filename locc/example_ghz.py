@@ -53,7 +53,7 @@ def GHZ_3_tensored_another(dims):
     #print(ghz)
     return ghz_tensored_another
 
-# em = EntanglementMeasures(3, GHZ(3), 3)
+em = EntanglementMeasures(3, GHZ(3), 3)
 
 # k_party_obj1 = k_party(3, 3, [(1, [3]), (1, [3]), (1, [3])], GHZ(3))
 # k_party_obj2 = k_party(3, 3, [(1, [3]), (1, [3]), (1, [3])], GHZ(3))

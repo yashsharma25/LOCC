@@ -13,8 +13,8 @@ from qiskit.quantum_info import Statevector
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):
         self.k_party_obj = None
-        self.N = N
-        self.psi = psi
+        self.N = N # dimensions -- no longer needed
+        self.psi = psi # used to stand for k party state...
         self.party_to_measure = party_to_measure
         self.starting_parameters = []
         self.partyA = 0
@@ -29,7 +29,7 @@ class EntanglementMeasures:
     def entanglement_fluctuation(self, quantum_state):
         return
     
-    #lower bound for localisable entanglement
+    #lower bound for localisable entanglement USE THIS ONE
     def get_le_lower_bound(self, k_party_obj, partyA, partyB):
         self.k_party_obj = k_party_obj
         self.psi = self.k_party_obj.q_state
@@ -62,7 +62,7 @@ class EntanglementMeasures:
             print("Entanglement entropy = ", res.fun)
             return res.fun
 
-    #upper bound for localisable entanglement
+    #upper bound for localisable entanglement USE THIS ONE
     def get_le_upper_bound(self, k_party_obj, partyA, partyB):
         self.k_party_obj = k_party_obj
         self.partyA = partyA
@@ -113,7 +113,7 @@ class EntanglementMeasures:
             self.party_to_measure = 1
 
         if ((partyA == 1 and partyB == 2) or (partyA == 2 and partyB == 1)) :
-            self.party_to_measure = arr[0].dims ** 2
+            self.party_to_measure = arr[0].dims ** 2 # what does this do?
 
         v = np.random.uniform(0, 2*np.pi, arr[0].dims ** 2)
         self.starting_parameters = v
