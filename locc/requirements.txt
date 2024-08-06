@@ -1,0 +1,5 @@
+numpy
+qiskit
+locc
+manim
+PyQt5
