@@ -434,62 +434,63 @@ class MeasurementScene(ThreeDScene):
         self.res = res
         self.execution_type = execution_type
         self.entanglement_measures = entanglement_measures
+        self.total_num_parties = k_party_obj.k
+        self.measure_obj = (self.locc_op[0].party_index, self.locc_op[0].qudit_index) # tuple containing (party index, qudit index)
         super().__init__(**kwargs)
 
     def construct(self):
         # create the graph: exisiting manim stuff
         # show the measurement happening: controller.execute_protocol()
         # show the result of the measurement: get_le_upper_bound_evolving()
-        self.create_graph()
+        # self.create_graph() # old graph creation
         # at this point, the graph is completely created
-        # self.model_measurement()
+        self.create_graph_new() # new way to create graph to handle k > 1
         self.model_individual_EEs()
 
-    def create_graph(self):
-        # basic labels
-        my_text = Text(f"Executing {self.locc_op[0].operation_type} on party {self.locc_op[0].party_index}, qudit {self.locc_op[0].qudit_index}")
-        self.play(Create(my_text))
-        self.wait(1)
-        self.play(Uncreate(my_text))
-        self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
+    def create_graph_new(self):
+        scale_factor = 1 / (self.total_num_parties ** 0.5) if self.total_num_parties > 1 else 1
 
-        # create nodes and edges
-        party_one = self.k_party_obj.state_desc[0] # VERY IMPORTANT!! UNDERSTAND STATE_DESC ATTRIBUTE -- ATM HARD CODED FOR ONE PARTY
-        num_qudits = party_one[0]
-        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(num_qudits)]
-        coordinates = [(2 * np.cos(angle), 2 * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, num_qudits, endpoint=False)]
+        for party_index in range(self.total_num_parties):
+            party = self.k_party_obj.state_desc[party_index]
+            party_num_qudits, party_qudit_dims = party[0], party[1]
+            nodes = [Sphere(radius=0.3 * scale_factor, color=BLUE) for _ in range(party_num_qudits)]
+            coordinates = [(2 * scale_factor * np.cos(angle), 2 * scale_factor * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, party_num_qudits, endpoint=False)]
+            
+            # calculate the position offset for this party
+            if self.total_num_parties > 1:
+                offset_x = (party_index - (self.total_num_parties - 1) / 2) * (5 * scale_factor)
+            else:
+                offset_x = 0
 
-        for node, coord in zip(nodes, coordinates):
-            node.move_to(coord)
+            for node, coord in zip(nodes, coordinates):
+                node.move_to([coord[0] + offset_x, coord[1], coord[2]])
 
-        node_dots = [Dot(point=coord) for coord in coordinates]
-        
-        # initialize edges
-        edges, self.edge_map = [], {}
-        for i in range(num_qudits):
-            for j in range(i + 1, num_qudits):
-                if (j, i) not in self.edge_map:
-                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
-                    self.edge_map[(i, j)] = edge
-                    edges.append(edge)
+            node_dots = [Dot(point=[coord[0] + offset_x, coord[1], coord[2]]) for coord in coordinates]
 
-        self.sphere_group = VGroup(*nodes)
-        self.node_group = VGroup(*node_dots)
-        self.edge_group = VGroup(*edges)
-        self.sphere_group_copy, self.node_group_copy, self.edge_group_copy = map(copy.deepcopy, [self.sphere_group, self.node_group, self.edge_group])
+            # Initialize edges
+            edges, edge_map = [], {} # might need to keep a global variable so that this doesn't get overwritten everytime we're dealing with a new party
+            for i in range(party_num_qudits):
+                for j in range(i + 1, party_num_qudits):
+                    if (j, i) not in edge_map:
+                        edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
+                        edge_map[(i, j)] = edge
+                        edges.append(edge)
 
-        self.play(Create(self.sphere_group), Create(self.node_group), Create(self.edge_group))
-        self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
+            sphere_group = VGroup(*nodes)
+            node_group = VGroup(*node_dots)
+            edge_group = VGroup(*edges)
 
-        # add labels to nodes
-        for i, dot in enumerate(self.node_group):
+            self.play(Create(sphere_group), Create(node_group), Create(edge_group))
+
+        self.move_camera(phi=0 * DEGREES, theta=-90 * DEGREES)
+
+        # Add labels to nodes
+        for i, dot in enumerate(node_group):
             label = Tex(f"{i}")
-            label.next_to(dot, DOWN if i in [3, 4] else UP) # to avoid sphere-label overlap
+            label.next_to(dot, DOWN if i in [3, 4] else UP)  # Avoid sphere-label overlap
             self.play(Create(label))
-
-    def model_measurement(self):
-        # zoom into specific party specific qudit
-        print()
+        
+        # add functionality to zoom into party that is being measured
 
     def model_individual_EEs(self):
         party_one = self.k_party_obj.state_desc[0] # VERY IMPORTANT!! UNDERSTAND STATE_DESC ATTRIBUTE -- ATM HARD CODED FOR ONE PARTY
@@ -577,7 +578,48 @@ class MeasurementScene(ThreeDScene):
         self.play(Create(rectangle), Create(sphere))
         self.play(Create(letter_m))
         self.play(Uncreate(letter_m), Uncreate(sphere), Uncreate(rectangle))
+    
+    def create_graph(self):
+        # basic labels
+        my_text = Text(f"Executing {self.locc_op[0].operation_type} on party {self.locc_op[0].party_index}, qudit {self.locc_op[0].qudit_index}")
+        self.play(Create(my_text))
+        self.wait(1)
+        self.play(Uncreate(my_text))
+        self.move_camera(phi=65*DEGREES, theta=45*DEGREES)
 
+        # create nodes and edges
+        party_one = self.k_party_obj.state_desc[0] # VERY IMPORTANT!! UNDERSTAND STATE_DESC ATTRIBUTE -- ATM HARD CODED FOR ONE PARTY
+        num_qudits = party_one[0]
+        nodes = [Sphere(radius=0.3, color=BLUE) for _ in range(num_qudits)]
+        coordinates = [(2 * np.cos(angle), 2 * np.sin(angle), 0) for angle in np.linspace(0, 2 * np.pi, num_qudits, endpoint=False)]
+
+        for node, coord in zip(nodes, coordinates):
+            node.move_to(coord)
+
+        node_dots = [Dot(point=coord) for coord in coordinates]
+        
+        # initialize edges
+        edges, self.edge_map = [], {}
+        for i in range(num_qudits):
+            for j in range(i + 1, num_qudits):
+                if (j, i) not in self.edge_map:
+                    edge = Line(node_dots[i].get_center(), node_dots[j].get_center())
+                    self.edge_map[(i, j)] = edge
+                    edges.append(edge)
+
+        self.sphere_group = VGroup(*nodes)
+        self.node_group = VGroup(*node_dots)
+        self.edge_group = VGroup(*edges)
+        self.sphere_group_copy, self.node_group_copy, self.edge_group_copy = map(copy.deepcopy, [self.sphere_group, self.node_group, self.edge_group])
+
+        self.play(Create(self.sphere_group), Create(self.node_group), Create(self.edge_group))
+        self.move_camera(phi=0*DEGREES, theta=-90*DEGREES)
+
+        # add labels to nodes
+        for i, dot in enumerate(self.node_group):
+            label = Tex(f"{i}")
+            label.next_to(dot, DOWN if i in [3, 4] else UP) # to avoid sphere-label overlap
+            self.play(Create(label))
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = QuantumOperationsGUI()
