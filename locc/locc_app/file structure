@@ -1,0 +1,18 @@
+my_app/
+├── __init__.py
+├── model/
+│   ├── __init__.py
+│   ├── entanglement_measures.py
+│   └── measurement_scene.py
+│   └── k_party.py
+│   └── locc_operation.py
+├── view/
+│   ├── __init__.py
+│   └── gui.py
+├── controller/
+│   ├── __init__.py
+│   ├── locc_controller.py
+│   └── video_thread.py
+└── resources/
+    ├── __init__.py
+    └── themes.py
