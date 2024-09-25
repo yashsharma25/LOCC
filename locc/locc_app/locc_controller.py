@@ -1,6 +1,6 @@
 from qiskit.quantum_info.operators import Operator
 
-class LoccController:
+class locc_controller:
     '''
     Args:
 
@@ -38,12 +38,10 @@ class LoccController:
                 #perform measurement
                 outcome, self.k_party_obj.q_state = self.k_party_obj.q_state.measure([qudit_index])
                 print("Outcome is ", outcome)
-                print("Type of Outcome Object: " + str(type(outcome)))
 
                 #save the measurement outcome which will be used in the next conditional operation
                 self.k_party_obj.measurement_result[(locc_op.party_index, qudit_index)] = outcome
-                return [f"Outcome is: {outcome}.", self.k_party_obj] # returning a list where res[0] = a string describing outcome, and res[1] = k_party_obj itself
 
-        # print("After protocol run")
-        # print(self.k_party_obj.q_state)
-        # will have to return something here to make manim video
+        print("After protocol run")
+        print(self.k_party_obj.q_state)
+        # return self.k_party_obj

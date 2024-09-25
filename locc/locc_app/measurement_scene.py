@@ -2,13 +2,14 @@ from manim import *
 import copy
 
 class MeasurementScene(ThreeDScene):
-    def __init__(self, locc_op, k_party_obj, res, execution_type, ee_string, **kwargs):
+    def __init__(self, locc_op, k_party_obj, res, execution_type, ee_string, new_k_party_obj, **kwargs):
         self.locc_op = locc_op
         self.k_party_obj = k_party_obj
         self.res = res
         self.execution_type = execution_type
         self.ee_string = ee_string
         self.total_num_parties = k_party_obj.k
+        self.new_k_party_obj = new_k_party_obj
         self.measure_obj = (self.locc_op[0].party_index, self.locc_op[0].qudit_index) # tuple containing (party index, qudit index)
         super().__init__(**kwargs)
 
