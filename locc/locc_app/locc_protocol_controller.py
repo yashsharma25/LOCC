@@ -15,35 +15,26 @@ class LoccProtocolController():
         self.parent_gui = parent_gui
         self.locc_step_widgets = []
         self.locc_protocol_obj = None
-    
-    def clear_layout(self, layout):
-        """Recursively clear a layout and delete all its items."""
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()  # Ensure widgets are properly deleted
-            elif item.layout() is not None:
-                self.clear_layout(item.layout())  # Recursively clear nested layouts
-            del item
 
     def handle_add_locc_entries(self, locc_frame_layout, locc_entry_text):
+        # Clear previous entries
         while locc_frame_layout.count():
             item = locc_frame_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
-            elif item.layout is not None:
+            elif item.layout() is not None:
                 self.clear_layout(item.layout())
             del item
 
+        # Validate input
         if locc_entry_text == '':
             QMessageBox.critical(
                 self.parent_gui, "Input Error",
                 "Please enter an integer value in 'Number of steps in LOCC protocol (number of locc objects)' field."
             )
-            return
-        
+            return None
+
         try:
             num_steps = int(locc_entry_text)
         except ValueError:
@@ -51,8 +42,8 @@ class LoccProtocolController():
                 self.parent_gui, "Input Error",
                 "Invalid input. Please enter a valid integer."
             )
-            return
-        
+            return None
+
         self.locc_step_widgets.clear()
 
         # Dynamically add LOCC entries
@@ -123,58 +114,90 @@ class LoccProtocolController():
             # Add step widgets to the list
             self.locc_step_widgets.append(step_widgets)
 
+        create_locc_protocol_button = QPushButton("Create LOCC Protocol")
+        create_locc_protocol_button.clicked.connect(self.on_create_locc_protocol_button)
+        locc_frame_layout.addWidget(create_locc_protocol_button)
+
+        # Initialize the locc_protocol_obj as a list
+        if self.locc_protocol_obj is None:
+            self.locc_protocol_obj = []  # Use a list instead of a string
+
+        return self.locc_protocol_obj
+
+        
+    def on_create_locc_protocol_button(self):
+        self.locc_protocol_obj = self.locc_protocol_obj
+        
+        # Ensure locc_protocol_obj is correctly set, not None
+        if self.locc_protocol_obj is not None:
+            self.locc_protocol_obj = self.locc_protocol_obj
+            print(f"locc_protocol_obj = {self.locc_protocol_obj}")
+            # Show confirmation message
+            QMessageBox.information(
+                self.parent_gui, "LOCC Operation",
+                f"LOCC Protocol Created\n"
+            )
+        else:
+            print("Error: Failed to create LOCC protocol.")
+        
+        return
+
+    def clear_layout(self, layout):
+        """Recursively clear a layout and delete all its items."""
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()  # Ensure widgets are properly deleted
+            elif item.layout() is not None:
+                self.clear_layout(item.layout())  # Recursively clear nested layouts
+            del item
+
     def save_locc_entry(self, widgets):
-        # Ensure the list is always initialized before appending
+        # Ensure locc_protocol_obj is initialized as a list
         if self.locc_protocol_obj is None:
             self.locc_protocol_obj = []
 
         try:
-            # Extract values from widgets
+            # Extract basic values from widgets
             party_index = int(widgets['party_index_entry'].text())
             qudit_index = int(widgets['qudit_index_entry'].text())
             operation_type = widgets['operation_type_combobox'].currentText()
 
+            # Initialize operator and condition as None
             operator = None
             condition = None
 
+            # Extract the operator choice
+            operator_choice = widgets['operator_combobox'].currentText()
+            if operator_choice == "XGate":
+                operator = XGate()
+            elif operator_choice == "HGate":
+                operator = HGate()
+            elif operator_choice == "CXGate":
+                operator = CXGate()
+
             # Handle conditional operations
             if operation_type == "conditional":
+                # Ensure that conditional inputs are valid
                 condition_party_index = int(widgets['condition_party_index_entry'].text())
                 condition_qudit_index = int(widgets['condition_qudit_index_entry'].text())
                 condition_measurement_result = int(widgets['condition_measurement_result_entry'].text())
                 condition = (condition_party_index, condition_qudit_index, condition_measurement_result)
 
-                operator_choice = widgets['operator_combobox'].currentText()
-                if operator_choice == "XGate":
-                    operator = XGate()
-                elif operator_choice == "HGate":
-                    operator = HGate()
-                elif operator_choice == "CXGate":
-                    operator = CXGate()
-
-            elif operation_type == "measurement":
-                operator_choice = widgets['operator_combobox'].currentText()
-                if operator_choice == "XGate":
-                    operator = XGate()
-                elif operator_choice == "HGate":
-                    operator = HGate()
-                elif operator_choice == "CXGate":
-                    operator = CXGate()
-
             # Create LOCC operation instance
             locc_op = LoccOperation(party_index, qudit_index, operation_type, operator, condition)
 
-            # Save to the list
+            # Save the LOCC operation to the protocol list
             self.locc_protocol_obj.append(locc_op)
 
-            # Confirmation message - Pass parent_gui instead of self
+            # Show confirmation message
             QMessageBox.information(
-                self.parent_gui, "LOCC Operation", 
-                f"LOCC Operation Created:\nParty Index: {locc_op.party_index}\nQudit Index: {locc_op.qudit_index}\nOperation Type: {locc_op.operation_type}\nCondition: {locc_op.condition}\nOperator: {locc_op.operator}"
+                self.parent_gui, "LOCC Operation",
+                f"LOCC Operation Created:\nParty Index: {locc_op.party_index}\nQudit Index: {locc_op.qudit_index}\n"
+                f"Operation Type: {locc_op.operation_type}\nCondition: {locc_op.condition}\nOperator: {locc_op.operator}"
             )
 
-            return self.locc_protocol_obj
-
         except ValueError:
-            # Error message - Also pass parent_gui instead of self
+            # Show error message when inputs are invalid
             QMessageBox.critical(self.parent_gui, "Input Error", "Please enter valid integer values.")

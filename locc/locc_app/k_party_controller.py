@@ -5,9 +5,9 @@ from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtGui import *
 from qiskit.quantum_info import Statevector
-from quantum_state_controller import QuantumStateController
+from quantum_state_controller import quantum_state_controller
 
-class KPartyController():
+class k_party_controller():
     def __init__(self, parent_window):
         self.parent_window = parent_window
         self.k_party_obj = None
@@ -16,43 +16,44 @@ class KPartyController():
         self.party_to_index = {}
         self.party_names = None
 
-    def handle_create_k_party(self, party_names, k_entry, dim_entry, quantum_state_entry, num_qudits_entries):
+    def handle_create_k_party(self, party_names, k_entry, quantum_state_entry, num_qudits_entries, party_dim_entries):
         try:
             if party_names == "":
                 raise ValueError("Please enter 'Party Names' field")
             
-            print(party_names)
-            
+            self.party_names = party_names.split(',')
+
             k = int(k_entry)
-            dims = self.parse_dimension_input(dim_entry)
-            
-            state_desc = []
+            state_desc = []  # Description of the multi-party system
+            dims = [] # overall dimension of k party
             
             for i in range(k):
                 num_qudits_str = num_qudits_entries[i].text().strip()
-                
-                if num_qudits_str == '':
-                    raise ValueError("Please enter values for all fields.")
-                
-                num_qudits = int(num_qudits_str)
-                
-                state_desc.append((num_qudits, [2]*num_qudits)) # this is assuming dim = 2... that's wrong
-                # state_desc.append((num_qudits, dims[i])) # something like this??
-            
-            # q_state = self.create_initial_state(dims)
-            quantum_state_controller = QuantumStateController(quantum_state_entry, num_qudits, dims)
-            q_state = quantum_state_controller.create_quantum_state()
-            self.party_names = party_names.split(',') if party_names else None
-            
+                party_dim_str = party_dim_entries[i].text().strip()
 
+                if num_qudits_str == '' or party_dim_str == '':
+                    raise ValueError("Please enter values for all fields.")
+
+                num_qudits = int(num_qudits_str)
+                party_dim = int(party_dim_str)
+
+                # Append to state_desc as (number of qudits, dimensions of each qudit)
+                state_desc.append((num_qudits, [party_dim] * num_qudits))
+
+                dims.append(party_dim)
+            # Create the quantum state using QuantumStateController
+            q_controller = quantum_state_controller(quantum_state_entry, num_qudits, state_desc)
+            q_state = q_controller.create_quantum_state()  # Get the quantum state (superposition or ground)
+
+            # Create the KParty object with the generated state
             self.k_party_obj = KParty(k, dims, state_desc, q_state, self.party_names)
-            QMessageBox.information(self.parent_window, "k_party Created", f"k_party instance created with {k} parties.")
             
+            QMessageBox.information(self.parent_window, "KParty Created", f"KParty instance created with {k} parties.")
+
             return self.k_party_obj
-        
+
         except ValueError as e:
             QMessageBox.critical(self.parent_window, "Input Error", str(e))
-            # QMessageBox.critical(self, "Input Error", "Please ensure all entries are integer values.")
 
     def create_initial_state(self, dims): # double check if this is correct
         return Statevector.from_label('0' * dims)

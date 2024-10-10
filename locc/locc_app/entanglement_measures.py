@@ -10,7 +10,7 @@ from k_party import KParty
 from qiskit.quantum_info.operators import Operator
 from qiskit.quantum_info import Statevector
 
-class EntanglementMeasures:
+class entanglement_measures:
     def __init__(self, N, psi, party_to_measure):
         self.k_party_obj = None
         self.N = N # dimensions -- no longer needed
