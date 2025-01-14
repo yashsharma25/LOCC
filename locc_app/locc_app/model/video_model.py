@@ -66,6 +66,8 @@ class VideoModel:
                         party_line = Line(party_positions[i], party_positions[j], color=WHITE)
                         self.party_edges[(i,j)] = party_line
                         self.play(Create(party_line))
+
+                print("create_k_party_system")
             
             def create_party(self, party_index, offset_x, scale_factor):
                 party_state_desc = self.k_party_obj.state_desc[party_index]
@@ -106,6 +108,8 @@ class VideoModel:
                 avg_y = np.mean([coord[1] for coord in coords])
                 avg_z = np.mean([coord[2] for coord in coords])
 
+                print("create_party")
+
                 return np.array([avg_x, avg_y, avg_z])
 
 
@@ -117,6 +121,7 @@ class VideoModel:
                     self.remove(mobject)
                 # Optionally clear the list of mobjects
                 self.mobjects.clear()
+                print("clear_scene")
 
             ''' have taken the execute_protocol() method from the locc_controller --> will be easier to create the script from here '''
             def execute_protocol(self):
@@ -127,8 +132,11 @@ class VideoModel:
 
                 # Get the number of parties in the k_party_obj (assuming it has an attribute `parties`)
                 all_party_indices = set(range(self.k_party_obj.parties))  # Create a set of all party indices
+                counter = 0
 
                 for locc_op in self.locc_protocol:
+                    counter += 1
+                    print(f"counter: {counter}")
                     # Center and scale the party for the current LOCC operation
                     party_index = locc_op.party_index
                     '''
@@ -140,13 +148,18 @@ class VideoModel:
 
                     self.center_and_scale_party(party_index)
                     qudit_index = self.k_party_obj.get_qudit_index_in_state(locc_op.party_index, locc_op.qudit_index)
+                    
+                    print(f"locc_op.operation_type: {locc_op.operation_type}")
 
                     if locc_op.operation_type == "default": # IMPORTANT: This is where we deal with default operations in the protocol.
                         self.k_party_obj.q_state.evolve(Operator(locc_op.operator), [qudit_index])
-                        default_txt = f"Deafault operation: Applying operator {locc_op.operator} on qudit index {qudit_index}"
+                        default_txt = Text(f"Deafault operation: Applying operator {locc_op.operator} on qudit index {qudit_index}")
+                        print("before text")
                         self.play(Create(default_txt))
                         self.wait(2)
+                        print("after text")
                         self.play(Uncreate(default_txt))
+                        print("after uncreate text")
                         
                     elif locc_op.operation_type == "conditional":
                         print("IN CONDITION OPERATION")
@@ -202,6 +215,8 @@ class VideoModel:
                         self.wait(2)
                         self.play(Uncreate(meas_txt1))
 
+
+
                     
                     # Set PartyA as the party involved in the current LOCC operation
                     partyA_indices = [locc_op.party_index]  # Wrap in a list to pass to the entanglement measures method
@@ -230,6 +245,7 @@ class VideoModel:
                     self.clear_scene()
                 
                 self.new_k_party_obj = self.k_party_obj
+                print("execute_protocol")
 
             ''' easy way to get a singluar party of interest nice and big in the center of the screen '''
             def center_and_scale_party(self, party_index):
@@ -258,6 +274,7 @@ class VideoModel:
                     edge_group.animate.scale(scale_factor),
                     run_time=2
                 )
+                print("center_and_scale_party")
 
             ''' Show measurement by deleting respective Line and Sphere mobjects '''
             def show_measurement(self, party_index, qudit_index):
@@ -298,6 +315,8 @@ class VideoModel:
                     self.remove(line)
                     del self.party_edges[key]
 
+                print("show_measurement")
+
             def measurement_visualization(self, state):
                 print("IN MEASUREMENT VISUALIZATION")
                 original_phi = self.camera.phi
@@ -317,7 +336,10 @@ class VideoModel:
 
                 self.set_camera_orientation(phi=original_phi, theta=original_theta)
 
+                print("measurement_visualization")
+
         # Generate the video
         VideoScene().render()
         self.video_path = config.output_file
+        print("generate_video")
         return self.video_path

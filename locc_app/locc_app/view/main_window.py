@@ -146,9 +146,9 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(QLabel("LOCC Operation Creator"), alignment=Qt.AlignCenter)
         
         # Conditional operation entries
-        cond_text = QLabel("Leave the condition entry empty if the step is NOT a CONDITIONAL OPERATION.")
-        cond_text.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(cond_text)
+        dash_txt = QLabel("Please enter a dash '-' if entry is N/A")
+        dash_txt.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(dash_txt)
 
         locc_table_h_layout = QHBoxLayout()
 
@@ -183,8 +183,8 @@ class MainWindow(QMainWindow):
 
         # Dictionary of allowed functions with formatted strings
         self.locc_allowed_ops = {
-            'M': 'measurement',
-            'C': 'condition',
+            'M': 'measure',
+            'C': 'conditional_operation',
             'D': 'default'
         }
 
@@ -254,7 +254,7 @@ class MainWindow(QMainWindow):
                 file.write(template_content)
             QMessageBox.information(self, "Success", "Template downloaded successfully!")
 
-    def upload_template(self):
+    def upload_template(self): # will probably have to go in the model later?
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Template", "", "Text Files (*.txt)")
         if not file_path:
             return
@@ -299,6 +299,7 @@ class MainWindow(QMainWindow):
                     if current_section == "table":
                         table_data.append(stripped_line)
                     elif current_section == "locc_table":
+                        # if locc_table_data[0] and locc_table_data[0] == "conditional_operation":
                         locc_table_data.append(stripped_line)
 
             # Populate the tables
@@ -313,7 +314,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Failed to upload template: {e}")
 
 
-    def populate_table(self, table_widget, data):
+    def populate_table(self, table_widget, data): 
         # Clear any existing content
         table_widget.clear()
 
