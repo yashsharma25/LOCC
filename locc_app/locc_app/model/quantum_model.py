@@ -3,6 +3,7 @@ from qiskit.quantum_info import Statevector
 from qiskit.circuit.library import XGate, HGate, CXGate
 from model.k_party import k_party
 from model.locc_operation import locc_operation
+from sympy.physics.quantum.gate import H, X, Z #, CX
 
 class QuantumModel:
     def __init__(self):
@@ -27,12 +28,25 @@ class QuantumModel:
         locc_op_str = ""
         print(operation_type)
         if operator_choice == "XGate":
-            operator = XGate()
+            # operator = XGate()
+            operator = np.array(X().get_target_matrix())
         elif operator_choice == "HGate":
-            operator = HGate()
-        elif operator_choice == "CXGate":
-            operator = CXGate()
+            # operator = HGate()
+            operator = np.array(H().get_target_matrix()).astype(np.float64)
+        # elif operator_choice == "CXGate": # TO DO FIX CX IMPORT ERROR
+            # operator = CXGate()
+            # operator = np.array(CX().get_target_matrix()) # DOUBLE CHECK IF THIS WORKS
+        elif operator_choice == "ZGate": # ADD THIS BUTTON TO THE UI
+            operator = np.array(Z().get_target_matrix())
+        elif operator_choice == "-" and operation_type == "measure":
+            operator = None
+        
+        if condition == "-" and operation_type != "conditional_operation":
+            condition = None
+        elif operation_type == "conditional_operation":
+            pass # condition = condition
 
+        print(f"OPERATOR CHOICE: {operator_choice} AND OPERATOR: {operator}")
         locc_op = locc_operation(party_index, qudit_index, operation_type, operator, condition)
 
         self.locc_protocol_obj.append(locc_op)
