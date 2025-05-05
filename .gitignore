@@ -2,3 +2,4 @@
 *.pyc
 quantum/
 locc_app/locc_app/media/
+__pycache__
