@@ -1,0 +1,15 @@
+
+    num_parties: 2
+    num_qudits: 2,1
+    dim: 2
+    table:
+    Amplitude,Basis State
+    0.707,00
+    0.707,11
+    locc_table:
+    operation,operator,party index,qudit index,condition
+    default,HGate,0,0,-
+    measure,-,0,0,-
+    measure,-,0,1,-
+    conditional_operation,XGate,1,0,(0,0,1)
+    conditional_operation,ZGate,1,0,(0,1,1)
