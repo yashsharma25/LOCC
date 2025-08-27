@@ -1,0 +1,95 @@
+==============================
+PROJECT HANDOFF / DEVELOPER NOTES
+==============================
+
+1. PROJECT OVERVIEW
+-------------------
+Name: LOCC MANIM Project  
+Purpose: An interactive software application for visualizing Local Operations and Classical Communication (LOCC) protocols.  
+Current Status: Core backend routing and basic UI of the application is complete. The MANIM visualization framework has been initiated but requires further development, refinement, and user-friendly features.  
+Tech Stack:
+  - Frontend: PyQt5
+  - Backend: Python
+  - Other Tools/APIs: Qiskit, MANIM, NumPy (see environment.yml for full list)
+
+2. REPOSITORY STRUCTURE
+-----------------------
+locc_app
+    ├── controller
+    │   ├── __init__.py
+    │   └── app_controller.py
+    ├── developer_handoff.txt
+    ├── environment.yml
+    ├── main.py
+    ├── media
+    │   └── ... → compiled MANIM videos are stored here
+    ├── model → core Qiskit / LOCC protocol logic
+    │   ├── __init__.py
+    │   ├── entanglement_measures.py
+    │   ├── k_party.py
+    │   ├── locc_controller.py
+    │   ├── locc_operation.py
+    │   ├── locc_teleportation.py
+    │   ├── quantum_model.py
+    │   └── video_model.py
+    ├── README.md
+    ├── requirements.txt
+    ├── tests
+    │   ├── __init__.py
+    │   └── teleportation_template.txt → input example for teleportation; demonstrates parsing of user data
+    └── view
+        ├── __init__.py
+        └── main_window.py → all frontend / UI logic
+
+3. SETUP INSTRUCTIONS
+---------------------
+Clone repository:  
+    git clone https://github.com/yashsharma25/LOCC.git  
+    cd locc_app  
+
+Environment setup:  
+    conda env create -f environment.yml  
+    conda activate manim_env  
+
+Run locally:  
+    python main.py  
+
+Notes:  
+- Python version should match the specification in environment.yml  
+- Ensure MANIM is installed correctly (try rendering a simple test animation to confirm)  
+- Creating a virtual environment with environment.yml is the recommended setup method (see README for detailed instructions). The requirements.txt file is provided for reference but may not capture all dependencies as fully as the environment file.
+- This project was developed and tested on macOS and Linux environments.  
+- Windows users may encounter dependency conflicts, particularly with MANIM and PyQt5. If developing on Windows, additional adjustments to the environment may be required. 
+
+4. CURRENT FUNCTIONALITY
+------------------------
+- ✅ Users can input data into the application via simple frontend UI (upgrade as necessary), which is encapsulated correctly through backend and generates a basic MANIM video.
+
+5. INCOMPLETE WORK / TODOs
+--------------------------
+- ⏳ MANIM video script is incomplete. While user inputs are correctly processed, the generated videos are not yet sufficiently descriptive. (Run the teleportation example in `/tests/teleportation_template.txt` for reference.)  
+- ⏳ User input validation and error handling are limited. The application currently assumes well-formed input; unexpected input may cause crashes.  
+
+Known bugs: No formally documented bugs. Additional testing recommended, particularly around input edge cases. 
+
+6. DESIGN & ARCHITECTURE
+------------------------
+Architecture: Model–View–Controller (MVC)  
+Dependencies: See environment.yml for full dependency list  
+
+7. DEVELOPER NOTES
+------------------
+- Developed and tested primarily on macOS and Linux. Windows users may encounter dependency conflicts, particularly with MANIM and PyQt5.  
+- Video rendering can be slow on first run; clearing MANIM’s cache may help.  
+- The UI is currently minimal — expect to extend `main_window.py` for additional functionality.  
+
+8. NEXT STEPS
+-------------
+1. Define the intended MANIM video output for each LOCC protocol.  
+2. Expand and refine the MANIM video script in `/locc_app/model/video_model.py`.  
+3. Implement robust input validation and error handling across the application.  
+
+9. CONTACT / CREDITS
+--------------------
+Lab Lead (current point of contact): Yash Sharma (yss26@scarletmail.rutgers.edu)
+Previous Lead Software Developer: Senuri Rupasinghe (senuri.rupasinghe@rutgers.edu)  
