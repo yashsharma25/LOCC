@@ -1,18 +1,16 @@
-
 ==============================
 PROJECT HANDOFF / DEVELOPER NOTES
 ==============================
 
 1. PROJECT OVERVIEW
 -------------------
-Name: LOCC MANIM PROJECT
-Purpose: An interactive software to visualize LOCC protocols
-Current Status: Main backend / routing of the application is complete, and the MANIM visualization has been started but needs a lot of cleaning up.
+Name: LOCC MANIM Project  
+Purpose: An interactive software application for visualizing Local Operations and Classical Communication (LOCC) protocols.  
+Current Status: Core backend routing and basic UI of the application is complete. The MANIM visualization framework has been initiated but requires further development, refinement, and user-friendly features.  
 Tech Stack:
   - Frontend: PyQt5
   - Backend: Python
-  - Database:
-  - Other tools/APIs: Qiskit, MANIM, Numpy, etc. (see environment.yml file)
+  - Other Tools/APIs: Qiskit, MANIM, NumPy (see environment.yml for full list)
 
 2. REPOSITORY STRUCTURE
 -----------------------
@@ -24,8 +22,8 @@ locc_app
     ├── environment.yml
     ├── main.py
     ├── media
-    │   ├── ... --> where compiled MANIM videos will be saved
-    ├── model --> core qiskit / locc protocol logic related scripts
+    │   └── ... → compiled MANIM videos are stored here
+    ├── model → core Qiskit / LOCC protocol logic
     │   ├── __init__.py
     │   ├── entanglement_measures.py
     │   ├── k_party.py
@@ -38,52 +36,60 @@ locc_app
     ├── requirements.txt
     ├── tests
     │   ├── __init__.py
-    │   └── teleportation_template.txt --> teleporation example to see how to input into data into application
+    │   └── teleportation_template.txt → input example for teleportation; demonstrates parsing of user data
     └── view
         ├── __init__.py
-        └── main_window.py --> all frontend / UI is written here
+        └── main_window.py → all frontend / UI logic
 
 3. SETUP INSTRUCTIONS
 ---------------------
-Clone repo: git clone https://github.com/yashsharma25/LOCC.git cd locc_app
-Environment variables: environment.yml
-Installation:
-conda env create -f environment.yml
-conda activate manim_env
-Running locally: python main.py
-Other notes:
+Clone repository:  
+    git clone https://github.com/yashsharma25/LOCC.git  
+    cd locc_app  
+
+Environment setup:  
+    conda env create -f environment.yml  
+    conda activate manim_env  
+
+Run locally:  
+    python main.py  
+
+Notes:  
+- Python version should match the specification in environment.yml  
+- Ensure MANIM is installed correctly (try rendering a simple test animation to confirm)  
+- Creating a virtual environment with environment.yml is the recommended setup method (see README for detailed instructions). The requirements.txt file is provided for reference but may not capture all dependencies as fully as the environment file.
+- This project was developed and tested on macOS and Linux environments.  
+- Windows users may encounter dependency conflicts, particularly with MANIM and PyQt5. If developing on Windows, additional adjustments to the environment may be required. 
 
 4. CURRENT FUNCTIONALITY
 ------------------------
-- [ ] Feature 1 — user can properly input data into application and have data properly encapsulated within the application to generate MANIM video
-- [ ] Feature 2 — 
+- ✅ Users can input data into the application via simple frontend UI (upgrade as necessary), which is encapsulated correctly through backend and generates a basic MANIM video.
 
 5. INCOMPLETE WORK / TODOs
 --------------------------
-- [ ] Feature X — MANIM video script is very much incomplete.
-- [ ] Feature Y — 
-Known bugs:
+- ⏳ MANIM video script is incomplete. While user inputs are correctly processed, the generated videos are not yet sufficiently descriptive. (Run the teleportation example in `/tests/teleportation_template.txt` for reference.)  
+- ⏳ User input validation and error handling are limited. The application currently assumes well-formed input; unexpected input may cause crashes.  
+
+Known bugs: No formally documented bugs. Additional testing recommended, particularly around input edge cases. 
 
 6. DESIGN & ARCHITECTURE
 ------------------------
-Data Flow: Model View Controller (MVC) software architecture
-Key Decisions:
-Dependencies: see environment.yml
+Architecture: Model–View–Controller (MVC)  
+Dependencies: See environment.yml for full dependency list  
 
-7. DEVELOPMENT NOTES
---------------------
-- 
-- 
-- 
+7. DEVELOPER NOTES
+------------------
+- Developed and tested primarily on macOS and Linux. Windows users may encounter dependency conflicts, particularly with MANIM and PyQt5.  
+- Video rendering can be slow on first run; clearing MANIM’s cache may help.  
+- The UI is currently minimal — expect to extend `main_window.py` for additional functionality.  
 
 8. NEXT STEPS
 -------------
-1. Define, for any given LOCC protocol, what the MANIM video should look like
-2. After this, implement manim video script: /locc_app/model/video_model.py
-3. Error proof the entire application (i.e., there are a lot of places where the application assumes the user is entering all the input as expected-- need to account for improper use of application)
+1. Define the intended MANIM video output for each LOCC protocol.  
+2. Expand and refine the MANIM video script in `/locc_app/model/video_model.py`.  
+3. Implement robust input validation and error handling across the application.  
 
 9. CONTACT / CREDITS
 --------------------
-Name: Senuri Rupasinghe
-Role: Lead Software Developer
-Email/Slack: senuri.rupasinghe@rutgers.edus
+Lab Lead (current point of contact): Yash Sharma (yss26@scarletmail.rutgers.edu)
+Previous Lead Software Developer: Senuri Rupasinghe (senuri.rupasinghe@rutgers.edu)  
