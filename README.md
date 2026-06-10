@@ -59,15 +59,11 @@ locc/
   entanglement_structure_bipartite.py bipartition/entropy-structure experiments
   experiments/                       exploratory examples
 
-visualization/
-  visualization_server.py            browser visualization backend
-  static/                            frontend visualization code
-
 locc_app/
   model/, controller/, view/          application-style interface
 ```
 
-At present, the project supports multipartite state construction, selected entanglement diagnostics, local/conditional operations, early LOCC protocol execution, teleportation examples, and browser-based visualization.
+At present, the project supports multipartite state construction, selected entanglement diagnostics, local/conditional operations, early LOCC protocol execution, teleportation examples.
 
 ---
 
