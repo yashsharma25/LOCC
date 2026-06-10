@@ -1,18 +1,17 @@
-from qiskit.circuit.gate import Gate
 from locc_controller import locc_controller
 from locc_operation import locc_operation
 from qiskit.quantum_info import Statevector, random_statevector
+from qiskit.circuit.library import HGate, XGate, ZGate
 import numpy as np
 from k_party import k_party
-from sympy.physics.quantum.gate import H, X, Z
 
 def teleportation(k_party_obj):
 
-    locc_op1 = locc_operation(0, 0, "default", np.array(H().get_target_matrix()).astype(np.float64))
+    locc_op1 = locc_operation(0, 0, "default", HGate().to_matrix())
     locc_op2 = locc_operation(0, 0, "measure")
     locc_op3 = locc_operation(0, 1, "measure")
-    locc_op4 = locc_operation(1, 0, "conditional_operation", np.array(X().get_target_matrix()), (0, 0, 1))
-    locc_op5 = locc_operation(1, 0, "conditional_operation", np.array(Z().get_target_matrix()),  (0, 1, 1))
+    locc_op4 = locc_operation(1, 0, "conditional_operation", XGate().to_matrix(), (0, 0, 1))
+    locc_op5 = locc_operation(1, 0, "conditional_operation", ZGate().to_matrix(), (0, 1, 1))
 
     locc_teleporation_obj = locc_controller([locc_op1, locc_op2, locc_op3, locc_op4, locc_op5], k_party_obj)
 

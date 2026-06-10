@@ -35,7 +35,7 @@ class locc_controller:
                     self.k_party_obj.q_state.evolve(Operator(locc_op.operator), [qudit_index])
 
             elif locc_op.operation_type == "measure":
-                #perform measurement
+                #perform measurementa
                 outcome, self.k_party_obj.q_state = self.k_party_obj.q_state.measure([qudit_index])
                 print("Outcome is ", outcome)
 

@@ -1,6 +1,6 @@
 from qiskit.quantum_info import Statevector
 import numpy as np
-from entanglement_measures import EntanglementMeasures
+from locc.measures.localizable import EntanglementMeasures
 from k_party import k_party
 
 def GHZ(dims):

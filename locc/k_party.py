@@ -3,10 +3,6 @@ from qiskit.quantum_info import shannon_entropy
 
 class k_party:
     '''
-   
-
-    
-  
     Args:
     k = the number of parties
 
