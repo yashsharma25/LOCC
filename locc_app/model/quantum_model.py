@@ -1,9 +1,8 @@
 import numpy as np
 from qiskit.quantum_info import Statevector
-from qiskit.circuit.library import XGate, HGate, CXGate
+from qiskit.circuit.library import XGate, HGate, ZGate, CXGate
 from model.k_party import k_party
 from model.locc_operation import locc_operation
-from sympy.physics.quantum.gate import H, X, Z #, CX
 
 class QuantumModel:
     def __init__(self):
@@ -28,16 +27,11 @@ class QuantumModel:
         locc_op_str = ""
         print(operation_type)
         if operator_choice == "XGate":
-            # operator = XGate()
-            operator = np.array(X().get_target_matrix())
+            operator = XGate().to_matrix()
         elif operator_choice == "HGate":
-            # operator = HGate()
-            operator = np.array(H().get_target_matrix()).astype(np.float64)
-        # elif operator_choice == "CXGate": # TO DO FIX CX IMPORT ERROR
-            # operator = CXGate()
-            # operator = np.array(CX().get_target_matrix()) # DOUBLE CHECK IF THIS WORKS
-        elif operator_choice == "ZGate": # ADD THIS BUTTON TO THE UI
-            operator = np.array(Z().get_target_matrix())
+            operator = HGate().to_matrix()
+        elif operator_choice == "ZGate":
+            operator = ZGate().to_matrix()
         elif operator_choice == "-" and operation_type == "measure":
             operator = None
         

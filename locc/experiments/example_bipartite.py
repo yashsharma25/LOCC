@@ -14,7 +14,7 @@ ket2 = [0, 0, 1]
 #     phi = np.sqrt(3/5) * np.kron(ket0, ket0) + np.sqrt(1/5)  * np.kron(ket1, ket1)  + np.sqrt(1/5) * np.kron(ket2, ket2)
 
 #     d_psi = get_density_matrix(psi)
-#     d_phi = get_density_matrix(phi)
+#   w  d_phi = get_density_matrix(phi)
 
 #     d_psi = d_psi.reshape([3,3,3,3])
 #     d_phi = d_phi.reshape([3,3,3,3])

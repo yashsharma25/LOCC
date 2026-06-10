@@ -1,14 +1,10 @@
 #We might probably merge this class with the measures.py class that qiskit already has
 import numpy as np
 import math
-from qiskit.quantum_info import shannon_entropy
+from qiskit.quantum_info import shannon_entropy, Operator, Statevector
 from scipy import optimize
-
 from scipy.linalg import expm
 from model.k_party import k_party
-
-from qiskit.quantum_info.operators import Operator
-from qiskit.quantum_info import Statevector
 
 class EntanglementMeasures:
     def __init__(self, N, psi, party_to_measure):

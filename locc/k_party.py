@@ -1,5 +1,5 @@
 import numpy as np
-from qiskit.quantum_info import shannon_entropy
+from qiskit.quantum_info import shannon_entropy, DensityMatrix, partial_trace
 
 class k_party:
     '''
@@ -93,6 +93,20 @@ class k_party:
     #will return density matrix of the k-party state
     def get_density_matrix(self):
         return np.outer(self.q_state.data, self.q_state.data.conj())
+
+    def as_density_matrix(self):
+        return DensityMatrix(self.q_state)
+
+    def reduced_density_matrix(self, parties_to_keep):
+        keep = []
+        for p in parties_to_keep:
+            keep.extend(self.get_qudit_index_range(p))
+        trace_out = [q for q in range(self.total_qudits()) if q not in keep]
+        return partial_trace(self.q_state, trace_out)
+
+    def reduced_density_matrix_by_qudits(self, qudits_to_keep):
+        trace_out = [q for q in range(self.total_qudits()) if q not in qudits_to_keep]
+        return partial_trace(self.q_state, trace_out)
 
     #will return statevector of the k-party state
     def get_statevector(self):

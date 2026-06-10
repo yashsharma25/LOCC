@@ -1,13 +1,9 @@
 #We might probably merge this class with the measures.py class that qiskit already has
 import numpy as np
-from qiskit.quantum_info import shannon_entropy
+from qiskit.quantum_info import shannon_entropy, Operator, Statevector
 from scipy import optimize
-
 from scipy.linalg import expm
 from k_party import k_party
-
-from qiskit.quantum_info.operators import Operator
-from qiskit.quantum_info import Statevector
 
 class LocalizableEntanglement:
     def __init__(self, N, psi, party_to_measure):

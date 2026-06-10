@@ -4,7 +4,7 @@ from itertools import combinations
 from model.k_party import k_party
 from model.locc_operation import locc_operation
 from model.entanglement_measures import EntanglementMeasures
-from qiskit.quantum_info.operators import Operator
+from qiskit.quantum_info import Operator
 
 
 # TODO: visualization for default operation!! (that is, not a measurement, not a conditional, but a default op)

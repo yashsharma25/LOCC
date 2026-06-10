@@ -1,4 +1,4 @@
-from qiskit.extensions import Initialize
+from qiskit.circuit.library import Initialize
 
 #reverse operations useful to verify teleportation protocols
 class invert:

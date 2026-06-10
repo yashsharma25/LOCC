@@ -1,4 +1,4 @@
-from qiskit.quantum_info.operators import Operator
+from qiskit.quantum_info import Operator
 
 class locc_controller:
     '''
